@@ -1,0 +1,7 @@
+LICENSE
+README.md
+pyproject.toml
+movie_alchemy.egg-info/PKG-INFO
+movie_alchemy.egg-info/SOURCES.txt
+movie_alchemy.egg-info/dependency_links.txt
+movie_alchemy.egg-info/top_level.txt
