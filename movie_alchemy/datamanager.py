@@ -57,6 +57,11 @@ class DataManager:
         with self.db.session_factory.begin() as session:
             session.add(obj)
 
+    def add_favorite(self, user_id: int, movie_id: int) -> None:
+        """Add a movie to a user's favorites."""
+        with self.db.session_factory.begin() as session:
+            favorite = UsersFavorite(user_id=user_id, movie_id=movie_id)
+            session.add(favorite)
 
     def add_movie(
         self,
@@ -65,7 +70,7 @@ class DataManager:
         year: int | None = None,
         poster_url: str | None = None,
         imdb_id: str | None = None,
-    ) -> None:
+    ) -> Movie:
         """Add a new movie to the database."""
         with self.db.session_factory.begin() as session:
             new_movie = Movie(
@@ -76,4 +81,4 @@ class DataManager:
                 imdb_id=imdb_id,
             )
             session.add(new_movie)
-            session.commit()
+        return new_movie

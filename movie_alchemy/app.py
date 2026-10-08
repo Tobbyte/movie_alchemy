@@ -11,7 +11,8 @@ from config import (
     API_ERR_TOO_MANY_REQUESTS,
 )
 from datamanager import DataManager
-from flask import Flask, jsonify, redirect, request, url_for
+from dotenv import load_dotenv
+from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from setup_db import DB
@@ -21,6 +22,9 @@ from werkzeug.exceptions import HTTPException
 from movie_alchemy.models import Movie, User, UsersFavorite
 
 DB_USER_NAME = "name"
+
+load_dotenv()
+
 
 class InvalidParamError(Exception):
     """A query parameter is unknown or has an invalid value."""
@@ -97,47 +101,77 @@ class MovieAlchemyApp:
         )
 
         self.app.add_url_rule(
+            # lists all users or creates a new user
             "/users",
-            view_func=self.list_users,
+            view_func=self.users,
             methods=["GET", "POST"],
         )
 
         self.app.add_url_rule(
-            "/users/<int:user_id>/movies<",
+            # lists all movies for a user or adds a new movie one
+            "/users/<int:user_id>/movies",
             view_func=self.users_movies,
-            methods=["GET", "Post"],
+            methods=["GET", "POST"],
+        )
+
+        self.app.add_url_rule(
+            # saves a new movie to a user's favorites
+            "/users/<int:user_id>/movies_save",
+            view_func=self.users_movies_save,
+            methods=["POST"],
         )
 
         self.app.add_url_rule(
             "/users/<int:user_id>/movies/<int:movie_id>/update",
             view_func=self.update_movie_details,
-            methods=["Post"],
+            methods=["POST"],
         )
 
     ### route handlers ###
 
     def index(self) -> str:
-        """Return a simple message for the root route."""
-        return "Welcome to MoviWeb App!"
+        """Render the index page with a list of users.
 
-    def list_users(self) -> Response | tuple[Response, int]:
-        """List all users or create a new user."""
+        for /
+        """
+        users = self.data_manager.get_users()
+        return render_template("index.html", users=users)
+
+    def users(self) -> Response | tuple[Response, int]:
+        """List all users or create a new user.
+
+        for /users
+        """
+        print("users called", request.method)
         if request.method == "POST":
             return self.create_user()
 
         users = self.data_manager.get_users()
         return jsonify([user.as_dict() for user in users]), 200
 
-    def users_movies(self, user_id: int) -> tuple[Response, int]:
-        """List all movies."""
+    def users_movies(self, user_id: int) -> str | Response:
+        """List all movies for a user or add a new one.
+
+        for /users/<user_id>/movies
+        """
+        print("users_movies called", request.method)
         if request.method == "POST":
-            return self.add_movie()
+            return self.users_movies_add(user_id)
+
+        return self.render_movies_page(user_id)
+
+    def render_movies_page(
+        self,
+        user_id: int,
+        movie_suggestions: list | None = None,
+    ) -> str | Response:
+        """Render a user's movies and optional OMDb suggestions."""
         user = self.data_manager.get_user_by_id(user_id)
         if not user:
             return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
 
         favorites = [
-            fav.movie_id
+            self.data_manager.get_movie_by_id(fav.movie_id)
             for fav in self.data_manager.db
             .session_factory()
             .query(
@@ -145,60 +179,83 @@ class MovieAlchemyApp:
             )
             .filter_by(user_id=user_id)
         ]
-        return jsonify(favorites), 200
+        print(f"User {user_id} favorites: {favorites}")
+        print(f"Movies suggestions: {movie_suggestions}")
+        return render_template(
+            "movies.html",
+            user_name=user.name,
+            user_id=user_id,
+            movies=favorites,
+            movie_suggestions=movie_suggestions,
+        )
 
     def create_user(self) -> Response:
         """Create a new user."""
-        new_user_data_raw = request.get_json(silent=True)
+        name = request.form.get("name", "").strip()
 
-        if (
-            not new_user_data_raw  # pylint: disable=too-many-boolean-expressions
-            or not isinstance(new_user_data_raw, dict)
-            or not all(
-                isinstance(cont, str) for cont in new_user_data_raw.values()
-            )
-            or not new_user_data_raw.get(DB_USER_NAME, "").strip()
-        ):
-            # return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
-            return redirect(url_for("index"), 404)  # TODO
+        if not name:
+            return redirect(url_for("index"), 404)
 
-        new_user = self.data_manager.create_user(
-            new_user_data_raw[DB_USER_NAME],
-        )
+        new_user = self.data_manager.create_user(name)
+        print(new_user)
+        return redirect(url_for("index"), 303)
 
-        # return jsonify(new_user), 201
-        return redirect(url_for("index"))
-
-    def add_movie(self) -> tuple[Response, int]:
+    def users_movies_add(
+        self,
+        user_id: int,
+    ) -> tuple[Response, int] | Response:
         """Add a new movie."""
-        new_movie_data_raw = request.get_json(silent=True)
+        movie_name = request.form.get("movie_name", "").strip()
+        print(f"Adding movie: {movie_name}")
 
-        if (
-            not new_movie_data_raw  # pylint: disable=too-many-boolean-expressions
-            or not isinstance(new_movie_data_raw, dict)
-            or not all(
-                isinstance(cont, str) for cont in new_movie_data_raw.values()
-            )
-            or not new_movie_data_raw.get("name", "").strip()
-        ):
+        if not movie_name:
             return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
 
-        omdb_movie = self.fetch_omdb_data(new_movie_data_raw["name"])
+        results = self.search_ombd_by_title(movie_name)
+        print(f"OMDb API search results: {results}")
+        # omdb_movie = self.fetch_omdb_data(movie_name)
+        # print(f"OMDb API response: {omdb_movie}")
+        # if omdb_movie:
+        #     new_movie = self.data_manager.users_movies_add(
+        #         name=omdb_movie.get("title"),
+        #         year=int(omdb_movie.get("year")),
+        #         director=omdb_movie.get("director"),
+        #         poster_url=omdb_movie.get("poster_url"),
+        #         imdb_id=omdb_movie.get("imdb_id"),
+        #     )
+        #     self.data_manager.add_favorite(
+        #         user_id=user_id,
+        #         movie_id=new_movie.id,
+        #     )
+        return self.render_movies_page(user_id, results)
+
+    def users_movies_save(
+        self,
+        user_id: int,
+    ) -> tuple[Response, int] | Response:
+        """Save a movie to a user's favorites."""
+        movie_name = request.form.get("movie_name", "").strip()
+        print(f"Saving movie ID: {movie_name} for user ID: {user_id}")
+
+        if not movie_name:
+            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+
+        omdb_movie = self.fetch_omdb_data(movie_name)
+        print(f"OMDb API response: {omdb_movie}")
         if omdb_movie:
-            first_result = omdb_movie[0]
-            new_movie_data_raw.update({
-                "name": first_result.get("title", new_movie_data_raw["name"]),
-                "year": int(first_result.get("Year")),
-                "director": first_result.get("Director"),
-                "poster_url": first_result.get("Poster"),
-                "imdb_id": first_result.get("imdbID"),
-            })
+            new_movie = self.data_manager.add_movie(
+                name=omdb_movie.get("title"),
+                year=int(omdb_movie.get("year")),
+                director=omdb_movie.get("director"),
+                poster_url=omdb_movie.get("poster_url"),
+                imdb_id=omdb_movie.get("imdb_id"),
+            )
+            self.data_manager.add_favorite(
+                user_id=user_id,
+                movie_id=new_movie.id,
+            )
 
-        self.data_manager.add_movie(
-            name=new_movie_data_raw["name"],
-        )
-
-        return jsonify({"message": "Movie added successfully"}), 201
+        return redirect(url_for("users_movies", user_id=user_id), 303)
 
     def update_movie_details(
         self,
@@ -232,7 +289,7 @@ class MovieAlchemyApp:
         return jsonify({"message": "Movie details updated successfully"}), 200
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:
-        """Fetch movie data from the OMDb API."""
+        """Fetch movie data from the OMDb API by title."""
         api_key = os.getenv("OMDB_API_KEY")
         if not api_key:
             raise ValueError("OMDB_API_KEY environment variable is not set.")
@@ -250,6 +307,21 @@ class MovieAlchemyApp:
                     "poster_url": data.get("Poster"),
                     "imdb_id": data.get("imdbID"),
                 }
+        return None
+
+    def search_ombd_by_title(self, title: str) -> dict | None:
+        """Search for a movie by title using the OMDb API."""
+        api_key = os.getenv("OMDB_API_KEY")
+        if not api_key:
+            raise ValueError("OMDB_API_KEY environment variable is not set.")
+
+        url = f"http://www.omdbapi.com/?s={title}&apikey={api_key}"
+        response = requests.get(url, timeout=15)
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("Response") == "True":
+                return data.get("Search", [])
         return None
 
     def run(self, **kwargs: Any) -> None:  # noqa: ANN401
