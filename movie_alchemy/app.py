@@ -2,6 +2,7 @@
 import os
 from typing import Any
 
+import requests
 from config import (
     API_ERR_404_NOT_FOUND,
     API_ERR_INTERNAL_SERVER_ERROR,
@@ -10,7 +11,7 @@ from config import (
     API_ERR_TOO_MANY_REQUESTS,
 )
 from datamanager import DataManager
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, redirect, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from setup_db import DB
@@ -102,34 +103,16 @@ class MovieAlchemyApp:
         )
 
         self.app.add_url_rule(
-            "/movies",
-            view_func=self.list_movies,
-            methods=["GET"],
+            "/users/<int:user_id>/movies<",
+            view_func=self.users_movies,
+            methods=["GET", "Post"],
         )
 
-        # self.app.add_url_rule(
-        #     "/api/posts/<int:post_id>",
-        #     view_func=self.delete_post_api,
-        #     methods=["DELETE"],
-        # )
-
-        # self.app.add_url_rule(
-        #     "/api/posts/<int:post_id>",
-        #     view_func=self.update_post_api,
-        #     methods=["PUT"],  # should be PATCH, but exercise says PUT
-        # )
-
-        # self.app.add_url_rule(
-        #     "/api/posts/<int:post_id>/like",
-        #     view_func=self.like_post_api,
-        #     methods=["POST"],
-        # )
-
-        # self.app.add_url_rule(
-        #     "/api/posts/search",
-        #     view_func=self.search_posts_api,
-        #     methods=["GET"],
-        # )
+        self.app.add_url_rule(
+            "/users/<int:user_id>/movies/<int:movie_id>/update",
+            view_func=self.update_movie_details,
+            methods=["Post"],
+        )
 
     ### route handlers ###
 
@@ -137,7 +120,7 @@ class MovieAlchemyApp:
         """Return a simple message for the root route."""
         return "Welcome to MoviWeb App!"
 
-    def list_users(self) -> tuple[Response, int]:
+    def list_users(self) -> Response | tuple[Response, int]:
         """List all users or create a new user."""
         if request.method == "POST":
             return self.create_user()
@@ -145,12 +128,26 @@ class MovieAlchemyApp:
         users = self.data_manager.get_users()
         return jsonify([user.as_dict() for user in users]), 200
 
-    def list_movies(self) -> tuple[Response, int]:
+    def users_movies(self, user_id: int) -> tuple[Response, int]:
         """List all movies."""
-        movies = self.data_manager.get_movies()
-        return jsonify([movie.as_dict() for movie in movies]), 200
+        if request.method == "POST":
+            return self.add_movie()
+        user = self.data_manager.get_user_by_id(user_id)
+        if not user:
+            return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
 
-    def create_user(self) -> tuple[Response, int]:
+        favorites = [
+            fav.movie_id
+            for fav in self.data_manager.db
+            .session_factory()
+            .query(
+                UsersFavorite,
+            )
+            .filter_by(user_id=user_id)
+        ]
+        return jsonify(favorites), 200
+
+    def create_user(self) -> Response:
         """Create a new user."""
         new_user_data_raw = request.get_json(silent=True)
 
@@ -162,13 +159,98 @@ class MovieAlchemyApp:
             )
             or not new_user_data_raw.get(DB_USER_NAME, "").strip()
         ):
-            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+            # return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+            return redirect(url_for("index"), 404)  # TODO
 
         new_user = self.data_manager.create_user(
             new_user_data_raw[DB_USER_NAME],
         )
 
-        return jsonify(new_user), 201
+        # return jsonify(new_user), 201
+        return redirect(url_for("index"))
+
+    def add_movie(self) -> tuple[Response, int]:
+        """Add a new movie."""
+        new_movie_data_raw = request.get_json(silent=True)
+
+        if (
+            not new_movie_data_raw  # pylint: disable=too-many-boolean-expressions
+            or not isinstance(new_movie_data_raw, dict)
+            or not all(
+                isinstance(cont, str) for cont in new_movie_data_raw.values()
+            )
+            or not new_movie_data_raw.get("name", "").strip()
+        ):
+            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+
+        omdb_movie = self.fetch_omdb_data(new_movie_data_raw["name"])
+        if omdb_movie:
+            first_result = omdb_movie[0]
+            new_movie_data_raw.update({
+                "name": first_result.get("title", new_movie_data_raw["name"]),
+                "year": int(first_result.get("Year")),
+                "director": first_result.get("Director"),
+                "poster_url": first_result.get("Poster"),
+                "imdb_id": first_result.get("imdbID"),
+            })
+
+        self.data_manager.add_movie(
+            name=new_movie_data_raw["name"],
+        )
+
+        return jsonify({"message": "Movie added successfully"}), 201
+
+    def update_movie_details(
+        self,
+        user_id: int,
+        movie_id: int,
+    ) -> tuple[Response, int]:
+        """Update movie details for a user's favorite movie."""
+        data = request.get_json(silent=True)
+
+        if (
+            not data
+            or not isinstance(data, dict)
+            or "movie_id" not in data
+            or "user_id" not in data
+            or "new_title" not in data
+        ):
+            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+
+        # Check if the user and movie exist
+        user = self.data_manager.get_user_by_id(user_id)
+        movie = self.data_manager.get_movie_by_id(movie_id)
+
+        if not user or not movie:
+            return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
+
+        # Update the movie details
+        movie.name = data["new_title"]
+
+        self.data_manager.save_object(movie)
+
+        return jsonify({"message": "Movie details updated successfully"}), 200
+
+    def fetch_omdb_data(self, movie_name: str) -> dict | None:
+        """Fetch movie data from the OMDb API."""
+        api_key = os.getenv("OMDB_API_KEY")
+        if not api_key:
+            raise ValueError("OMDB_API_KEY environment variable is not set.")
+
+        url = f"http://www.omdbapi.com/?t={movie_name}&apikey={api_key}"
+        response = requests.get(url, timeout=15)
+
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("Response") == "True":
+                return {
+                    "title": data.get("Title"),
+                    "year": data.get("Year"),
+                    "director": data.get("Director"),
+                    "poster_url": data.get("Poster"),
+                    "imdb_id": data.get("imdbID"),
+                }
+        return None
 
     def run(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Start the Flask app."""

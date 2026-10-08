@@ -24,6 +24,13 @@ class DataManager:
         with self.db.session_factory.begin() as session:
             return list(session.scalars(select(User)).all())
 
+    def get_user_by_id(self, user_id: int) -> User | None:
+        """Retrieve a user by their ID."""
+        with self.db.session_factory.begin() as session:
+            return session.scalars(
+                select(User).where(User.id == user_id),
+            ).one_or_none()
+
     def get_movies(self) -> list[Movie]:
         """Retrieve all movies from the database."""
         with self.db.session_factory.begin() as session:
