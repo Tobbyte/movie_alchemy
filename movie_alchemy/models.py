@@ -42,6 +42,13 @@ class User(Base):
         """Create String representation."""
         return self.__repr__()
 
+    def as_dict(self) -> dict:
+        """Return a dictionary representation of the User instance."""
+        return {
+            "id": self.id,
+            "name": self.name,
+        }
+
 
 class Movie(Base):
     """Base class defining the movies table."""
@@ -74,6 +81,24 @@ class Movie(Base):
     poster_url: Mapped[str | None] = mapped_column(String, default=None)
     imdb_id: Mapped[str | None] = mapped_column(String, default=None)
 
+    def __repr__(self) -> str:
+        """Create String representation."""
+        return f"User(id: {self.id}, name: {self.name})"
+
+    def __str__(self) -> str:
+        """Create String representation."""
+        return self.__repr__()
+
+    def as_dict(self) -> dict:
+        """Return a dictionary representation of the Movie instance."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "director": self.director,
+            "year": self.year,
+            "poster_url": self.poster_url,
+            "imdb_id": self.imdb_id,
+        }
 
 class UsersFavorite(Base):
     """Base class defining the users_favorites table."""
@@ -97,3 +122,18 @@ class UsersFavorite(Base):
         DateTime,
         server_default=func.now(),
     )
+
+    def __repr__(self) -> str:
+        """Create String representation."""
+        return f"User(id: {self.user_id}, name: {self.movie_id})"
+
+    def __str__(self) -> str:
+        """Create String representation."""
+        return self.__repr__()
+
+    def as_dict(self) -> dict:
+        """Return a dictionary representation of the User instance."""
+        return {
+            "user_id": self.user_id,
+            "movie_id": self.movie_id,
+        }
