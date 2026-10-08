@@ -29,7 +29,10 @@ class DB:
         """Initialize the database connection and session."""
         DB_PATH.parent.mkdir(exist_ok=True)
         self.engine = create_engine(f"sqlite:///{DB_PATH}")
-        self.session_factory = sessionmaker(bind=self.engine)
+        self.session_factory = sessionmaker(
+            bind=self.engine,
+            expire_on_commit=False,
+        )
 
         event.listen(self.engine, "connect", self.set_sqlite_pragma)
 
