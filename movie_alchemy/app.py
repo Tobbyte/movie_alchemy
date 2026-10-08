@@ -1,59 +1,143 @@
 """Movie Alchemy app."""
+import os
+from typing import Any
 
-from sqlalchemy import or_, select
+from config import (
+    API_ERR_404_NOT_FOUND,
+    API_ERR_INTERNAL_SERVER_ERROR,
+    API_ERR_METHOD_NOT_ALLOWED,
+    API_ERR_TOO_MANY_REQUESTS,
+)
+from datamanager import DataManager
+from flask import Flask, jsonify
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from setup_db import DB
+from werkzeug import Response
+from werkzeug.exceptions import HTTPException
 
 from movie_alchemy.models import Movie, User, UsersFavorite
-from movie_alchemy.setup_db import DB
 
-db = DB()
+basedir = os.path.abspath(os.path.dirname(__file__))
 
 
-def main():
+class InvalidParamError(Exception):
+    """A query parameter is unknown or has an invalid value."""
 
-    movie1 = Movie(name="m1name")
-    movie2 = Movie(name="m2name")
-    user1 = User(name="u1name")
-    user2 = User(name="u2name")
 
-    with db.session_factory.begin() as session:
-        session.add(movie1)
-        session.add(movie2)
-        session.add(user1)
-        session.add(user2)
+class MovieAlchemyApp:
+    """Main application class for Movie Alchemy."""
 
-    with db.session_factory.begin() as session:
-        m1 = session.scalars(
-            select(Movie).where(
-                Movie.name == "m1name",
-            ),
-        ).one()
+    def __init__(self) -> None:
+        """Initialize the MovieAlchemyApp."""
+        self.app = Flask(__name__)
+        self.data_manager = DataManager()
+        self.db = (
+            self.data_manager.db
+        )  # Access the DB instance from DataManager
+        Limiter(
+            key_func=get_remote_address,
+            app=self.app,
+            default_limits=["100 per minute"],
+        )
 
-        u1 = session.scalars(
-            select(User).where(
-                User.name == "u1name",
-            ),
-        ).one_or_none()
+        # init_swagger_ui(self.app)  # noqa: ERA001
 
-        print(m1, u1)
-        if m1 and u1:
-            like1 = UsersFavorite(u1.id, m1.id)
-            session.add(like1)
+        self.setup_routes()
+        self.setup_error_handlers()
 
-    with db.session_factory.begin() as session:
-        result = session.scalars(select(User)).all()
-        print(result)
-        result = session.scalars(select(UsersFavorite)).all()
-        print(result)
+    def setup_error_handlers(self) -> None:
+        """Register JSON error handlers for the API application."""
+        self.app.register_error_handler(404, self.api_page_not_found)
+        self.app.register_error_handler(405, self.api_method_not_allowed)
+        self.app.register_error_handler(429, self.api_too_many_requests)
+        self.app.register_error_handler(500, self.api_internal_server_error)
+        self.app.register_error_handler(
+            InvalidParamError,
+            self.api_invalid_params,
+        )
 
-        movie1 = session.scalars(
-            select(Movie).where(
-                Movie.id == 1,
-            ),
-        ).one()
-        print(movie1)
-        # session.delete(movie1)
+    @staticmethod
+    def api_page_not_found(_: HTTPException) -> tuple[Response, int]:
+        """Return a JSON response for 404."""
+        return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
+
+    @staticmethod
+    def api_method_not_allowed(_: HTTPException) -> tuple[Response, int]:
+        """Return a JSON response for method forbidden."""
+        return jsonify({"error": API_ERR_METHOD_NOT_ALLOWED}), 405
+
+    @staticmethod
+    def api_too_many_requests(_: HTTPException) -> tuple[Response, int]:
+        """Return JSON for when rate limit is exceeded."""
+        return jsonify({"error": API_ERR_TOO_MANY_REQUESTS}), 429
+
+    @staticmethod
+    def api_internal_server_error(_: Exception) -> tuple[Response, int]:
+        """Return a JSON response for internal API errors."""
+        return jsonify({"error": API_ERR_INTERNAL_SERVER_ERROR}), 500
+
+    @staticmethod
+    def api_invalid_params(error: InvalidParamError) -> tuple[Response, int]:
+        """Return a JSON 400 naming the invalid parameter."""
+        return jsonify({"error": str(error)}), 400
+
+    @staticmethod
+    def api_db_error(error: Exception) -> tuple[Response, int]:
+        """Return a JSON 500 for database errors."""
+        return jsonify({"error": "Database error", "details": str(error)}), 500
+
+    def setup_routes(self) -> None:
+        """Set up the API routes for the Flask app."""
+        self.app.add_url_rule(
+            "/",
+            view_func=self.index,
+            methods=["GET"],
+        )
+
+        # self.app.add_url_rule(
+        #     "/api/posts",
+        #     view_func=self.get_posts_api,
+        #     methods=["GET", "POST"],
+        # )
+
+        # self.app.add_url_rule(
+        #     "/api/posts/<int:post_id>",
+        #     view_func=self.delete_post_api,
+        #     methods=["DELETE"],
+        # )
+
+        # self.app.add_url_rule(
+        #     "/api/posts/<int:post_id>",
+        #     view_func=self.update_post_api,
+        #     methods=["PUT"],  # should be PATCH, but exercise says PUT
+        # )
+
+        # self.app.add_url_rule(
+        #     "/api/posts/<int:post_id>/like",
+        #     view_func=self.like_post_api,
+        #     methods=["POST"],
+        # )
+
+        # self.app.add_url_rule(
+        #     "/api/posts/search",
+        #     view_func=self.search_posts_api,
+        #     methods=["GET"],
+        # )
+
+    ### route handlers ###
+
+    def index(self) -> str:
+        """Return a simple message for the root route."""
+        return "Welcome to MoviWeb App!"
+
+    def run(self, **kwargs: Any) -> None:
+        """Start the Flask app."""
+        self.app.run(**kwargs)
 
 
 if __name__ == "__main__":
+    db = DB()
     db.reset_db()
-    main()
+    db.create_tables()
+    MovieAlchemyApp().run(debug=True, port=5000)

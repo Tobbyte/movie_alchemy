@@ -21,6 +21,7 @@ DB_PATH = PROJECT_ROOT / "data" / "movie_alchemy.sqlite"
 # sys.path.insert(0, str(PROJECT_ROOT.parent))
 
 
+
 class DB:
     """Class to manage the database connection and session."""
 
