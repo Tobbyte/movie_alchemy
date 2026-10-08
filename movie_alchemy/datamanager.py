@@ -1,6 +1,6 @@
 """Module for managing database operations."""
 
-from models import Movie, User
+from models import Movie, User, UsersFavorite
 from setup_db import DB
 from sqlalchemy import select
 
@@ -12,12 +12,12 @@ class DataManager:
         """Initialize the DataManager with a database instance."""
         self.db = DB()
 
-    def create_user(self, name: str) -> None:
+    def create_user(self, name: str) -> User:
         """Create a new user and add it to the database."""
         with self.db.session_factory.begin() as session:
             new_user = User(name=name)
             session.add(new_user)
-            session.commit()
+        return new_user
 
     def get_users(self) -> list[User]:
         """Retrieve all users from the database."""
@@ -44,13 +44,12 @@ class DataManager:
             ).one_or_none()
             if movie_to_delete:
                 session.delete(movie_to_delete)
-                session.commit()
 
-    def save_object(self, obj: User | Movie) -> None:
+    def save_object(self, obj: User | Movie | UsersFavorite) -> None:
         """Save a User or Movie object to the database."""
         with self.db.session_factory.begin() as session:
             session.add(obj)
-            session.commit()
+
 
     def add_movie(
         self,
