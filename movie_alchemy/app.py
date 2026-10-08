@@ -5,11 +5,12 @@ from typing import Any
 from config import (
     API_ERR_404_NOT_FOUND,
     API_ERR_INTERNAL_SERVER_ERROR,
+    API_ERR_INVALID_REQUEST_DATA,
     API_ERR_METHOD_NOT_ALLOWED,
     API_ERR_TOO_MANY_REQUESTS,
 )
 from datamanager import DataManager
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from setup_db import DB
@@ -18,8 +19,7 @@ from werkzeug.exceptions import HTTPException
 
 from movie_alchemy.models import Movie, User, UsersFavorite
 
-basedir = os.path.abspath(os.path.dirname(__file__))
-
+DB_USER_NAME = "name"
 
 class InvalidParamError(Exception):
     """A query parameter is unknown or has an invalid value."""
@@ -95,11 +95,17 @@ class MovieAlchemyApp:
             methods=["GET"],
         )
 
-        # self.app.add_url_rule(
-        #     "/api/posts",
-        #     view_func=self.get_posts_api,
-        #     methods=["GET", "POST"],
-        # )
+        self.app.add_url_rule(
+            "/users",
+            view_func=self.list_users,
+            methods=["GET", "POST"],
+        )
+
+        self.app.add_url_rule(
+            "/movies",
+            view_func=self.list_movies,
+            methods=["GET"],
+        )
 
         # self.app.add_url_rule(
         #     "/api/posts/<int:post_id>",
@@ -131,7 +137,40 @@ class MovieAlchemyApp:
         """Return a simple message for the root route."""
         return "Welcome to MoviWeb App!"
 
-    def run(self, **kwargs: Any) -> None:
+    def list_users(self) -> tuple[Response, int]:
+        """List all users or create a new user."""
+        if request.method == "POST":
+            return self.create_user()
+
+        users = self.data_manager.get_users()
+        return jsonify([user.as_dict() for user in users]), 200
+
+    def list_movies(self) -> tuple[Response, int]:
+        """List all movies."""
+        movies = self.data_manager.get_movies()
+        return jsonify([movie.as_dict() for movie in movies]), 200
+
+    def create_user(self) -> tuple[Response, int]:
+        """Create a new user."""
+        new_user_data_raw = request.get_json(silent=True)
+
+        if (
+            not new_user_data_raw  # pylint: disable=too-many-boolean-expressions
+            or not isinstance(new_user_data_raw, dict)
+            or not all(
+                isinstance(cont, str) for cont in new_user_data_raw.values()
+            )
+            or not new_user_data_raw.get(DB_USER_NAME, "").strip()
+        ):
+            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+
+        new_user = self.data_manager.create_user(
+            new_user_data_raw[DB_USER_NAME],
+        )
+
+        return jsonify(new_user), 201
+
+    def run(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Start the Flask app."""
         self.app.run(**kwargs)
 
