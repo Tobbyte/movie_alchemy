@@ -5,7 +5,6 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from movie_alchemy.models import Base
 from sqlalchemy import (
     create_engine,
     event,
@@ -14,9 +13,12 @@ from sqlalchemy.orm import (
     sessionmaker,
 )
 
+from movie_alchemy.models import Base
+
 # make runnable from wherever.
 PROJECT_ROOT = Path(__file__).resolve().parent  # project root
-sys.path.insert(0, str(PROJECT_ROOT.parent))
+DB_PATH = PROJECT_ROOT / "data" / "movie_alchemy.sqlite"
+# sys.path.insert(0, str(PROJECT_ROOT.parent))
 
 
 class DB:
@@ -24,10 +26,9 @@ class DB:
 
     def __init__(self) -> None:
         """Initialize the database connection and session."""
-        self.engine = create_engine(
-            f"sqlite:///{PROJECT_ROOT / Path('data/movie_alchemy.sqlite')}",
-        )
-        self.session = sessionmaker(bind=self.engine)
+        DB_PATH.parent.mkdir(exist_ok=True)
+        self.engine = create_engine(f"sqlite:///{DB_PATH}")
+        self.session_factory = sessionmaker(bind=self.engine)
 
         event.listen(self.engine, "connect", self.set_sqlite_pragma)
 
@@ -42,3 +43,12 @@ class DB:
     def create_tables(self) -> None:
         """Create tables in the database."""
         Base.metadata.create_all(self.engine)
+
+    def reset_db(self) -> None:
+        """Reset the database by dropping and recreating tables."""
+        Base.metadata.drop_all(self.engine)
+        Base.metadata.create_all(self.engine)
+
+
+if __name__ == "__main__":
+    DB().create_tables()
