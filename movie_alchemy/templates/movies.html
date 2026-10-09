@@ -4,7 +4,7 @@
     <p class="eyebrow">Personal collection</p>
     <h1>{{ user_name }}'s Movies</h1>
 </header>
-<div search_container>
+<div class="search_container">
     <form action="{{ url_for('users_movies', user_id=user_id) }}" method="post">
         <label for="movie_name">Movie name:</label>
         <input type="text" id="movie_name" name="movie_name" required>
@@ -20,14 +20,17 @@
         <p>Suggestions for your search "{{ search_query }}". Please select:</p>
         <ul>
             {% for suggestion in movie_suggestions %}
-            <form action="{{ url_for('users_movies_save', user_id=user_id) }}" method="post">
-                <input type="hidden" name="imdb_id" value="{{ suggestion.imdbID }}">
-                {{ suggestion.Title }} ({{ suggestion.Year }})
-                <button><span aria-hidden="true">+</span> Add to shelf</button>
-            </form>
+            <li>
+                <form action="{{ url_for('users_movies_save', user_id=user_id) }}" method="post">
+                    <input type="hidden" name="imdb_id" value="{{ suggestion.imdbID }}">
+                    {{ suggestion.Title }} ({{ suggestion.Year }})
+                    <button type="submit"><span aria-hidden="true">+</span> Add to shelf</button>
+                </form>
+            </li>
             {% endfor %}
         </ul>
-        {% endif %}
+    </div>
+{% endif %}
     <div class="movies-container">
         {% for movie in movies %}
         <div class="movie-card">
