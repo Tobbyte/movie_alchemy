@@ -10,6 +10,7 @@ STATUS_200_OK = 200
 OMBD_SEARCH_URL = "http://www.omdbapi.com/?s={title}&apikey={api_key}"
 OMBD_GET_TITLE_URL = "http://www.omdbapi.com/?t={title}&apikey={api_key}"
 OMBD_KEY_NOT_SET_ERROR = "OMDB_API_KEY environment variable is not set."
+OMBD_ERR_MSG = "There was an error at OMDb, try again later."
 LIMITER_DEFAULT_LIMIT = "100 per minute"
 
 API_ERR_INVALID_POST_ID = "Invalid post ID"

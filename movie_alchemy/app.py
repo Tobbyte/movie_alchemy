@@ -10,6 +10,7 @@ from config import (
     API_ERR_METHOD_NOT_ALLOWED,
     API_ERR_TOO_MANY_REQUESTS,
     LIMITER_DEFAULT_LIMIT,
+    OMBD_ERR_MSG,
     OMBD_GET_TITLE_URL,
     OMBD_KEY_NOT_SET_ERROR,
     OMBD_SEARCH_URL,
@@ -317,7 +318,7 @@ class MovieAlchemyApp:
         try:
             response = requests.get(url, timeout=15)
         except requests.RequestException:
-            return {"error": "There was an error at OMDb, try again later."}
+            return {"error": OMBD_ERR_MSG}
 
         if response.status_code == STATUS_200_OK:
             data = response.json()
@@ -337,7 +338,7 @@ class MovieAlchemyApp:
         try:
             response = requests.get(url, timeout=15)
         except requests.RequestException:
-            return {"error": "There was an error at OMDb, try again later."}
+            return {"error": OMBD_ERR_MSG}
 
         if response.status_code == STATUS_200_OK:
             data = response.json()
