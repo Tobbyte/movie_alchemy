@@ -274,6 +274,12 @@ class MovieAlchemyApp:
                 303,
             )
 
+        if self.data_manager.get_user_by_id(user_id) is None:
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
+
         results = self.search_ombd_by_title(movie_name)
 
         if results and results[0].get("error"):
