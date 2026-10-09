@@ -369,7 +369,7 @@ class MovieAlchemyApp:
                 404,
             )
 
-        self.data_manager.delete_movie_by_id(movie_id)
+        self.data_manager.delete_favorite(user_id=user_id, movie_id=movie_id)
         return redirect(url_for("users_movies", user_id=user_id), 303)
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:

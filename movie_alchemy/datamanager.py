@@ -110,6 +110,22 @@ class DataManager:
             err_msg = "Failed to save favorite movie."
             raise RuntimeError(err_msg) from error
 
+    def delete_favorite(self, user_id: int, movie_id: int) -> None:
+        """Remove a movie from a user's favorites."""
+        try:
+            with self.db.session_factory.begin() as session:
+                favorite = session.scalars(
+                    select(UsersFavorite).where(
+                        UsersFavorite.user_id == user_id,
+                        UsersFavorite.movie_id == movie_id,
+                    ),
+                ).one_or_none()
+                if favorite:
+                    session.delete(favorite)
+        except SQLAlchemyError as error:
+            err_msg = "Failed to delete favorite movie."
+            raise RuntimeError(err_msg) from error
+
     def add_movie(
         self,
         name: str,
