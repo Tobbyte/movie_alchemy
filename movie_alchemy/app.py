@@ -19,10 +19,10 @@ from setup_db import DB
 from werkzeug import Response
 from werkzeug.exceptions import HTTPException
 
-from movie_alchemy.models import Movie, User, UsersFavorite
+from movie_alchemy.models import Movie, UsersFavorite
 
 DB_USER_NAME = "name"
-
+STATUS_200_OK = 200
 load_dotenv()
 
 
@@ -149,7 +149,7 @@ class MovieAlchemyApp:
         users = self.data_manager.get_users()
         return jsonify([user.as_dict() for user in users]), 200
 
-    def users_movies(self, user_id: int) -> str | Response:
+    def users_movies(self, user_id: int) -> str | tuple[Response, int]:
         """List all movies for a user or add a new one.
 
         for /users/<user_id>/movies
@@ -163,8 +163,9 @@ class MovieAlchemyApp:
     def render_movies_page(
         self,
         user_id: int,
-        movie_suggestions: list | None = None,
-    ) -> str | Response:
+        movie_suggestions: dict | None = None,
+        search_query: str | None = None,
+    ) -> str | tuple[Response, int]:
         """Render a user's movies and optional OMDb suggestions."""
         user = self.data_manager.get_user_by_id(user_id)
         if not user:
@@ -187,6 +188,7 @@ class MovieAlchemyApp:
             user_id=user_id,
             movies=favorites,
             movie_suggestions=movie_suggestions,
+            search_query=search_query,
         )
 
     def create_user(self) -> Response:
@@ -203,7 +205,7 @@ class MovieAlchemyApp:
     def users_movies_add(
         self,
         user_id: int,
-    ) -> tuple[Response, int] | Response:
+    ) -> tuple[Response, int] | str:
         """Add a new movie."""
         movie_name = request.form.get("movie_name", "").strip()
         print(f"Adding movie: {movie_name}")
@@ -213,21 +215,12 @@ class MovieAlchemyApp:
 
         results = self.search_ombd_by_title(movie_name)
         print(f"OMDb API search results: {results}")
-        # omdb_movie = self.fetch_omdb_data(movie_name)
-        # print(f"OMDb API response: {omdb_movie}")
-        # if omdb_movie:
-        #     new_movie = self.data_manager.users_movies_add(
-        #         name=omdb_movie.get("title"),
-        #         year=int(omdb_movie.get("year")),
-        #         director=omdb_movie.get("director"),
-        #         poster_url=omdb_movie.get("poster_url"),
-        #         imdb_id=omdb_movie.get("imdb_id"),
-        #     )
-        #     self.data_manager.add_favorite(
-        #         user_id=user_id,
-        #         movie_id=new_movie.id,
-        #     )
-        return self.render_movies_page(user_id, results)
+
+        return self.render_movies_page(
+            user_id,
+            results,
+            search_query=movie_name,
+        )
 
     def users_movies_save(
         self,
@@ -243,9 +236,13 @@ class MovieAlchemyApp:
         omdb_movie = self.fetch_omdb_data(movie_name)
         print(f"OMDb API response: {omdb_movie}")
         if omdb_movie:
+            if not omdb_movie.get("title"):
+                return jsonify({
+                    "error": "Movie title not found in OMDb response",
+                }), 400
             new_movie = self.data_manager.add_movie(
-                name=omdb_movie.get("title"),
-                year=int(omdb_movie.get("year")),
+                name=omdb_movie.get("title"),  # pyright: ignore[reportArgumentType]
+                year=omdb_movie.get("year"),
                 director=omdb_movie.get("director"),
                 poster_url=omdb_movie.get("poster_url"),
                 imdb_id=omdb_movie.get("imdb_id"),
@@ -292,12 +289,13 @@ class MovieAlchemyApp:
         """Fetch movie data from the OMDb API by title."""
         api_key = os.getenv("OMDB_API_KEY")
         if not api_key:
-            raise ValueError("OMDB_API_KEY environment variable is not set.")
+            err_msg = "OMDB_API_KEY environment variable is not set."
+            raise ValueError(err_msg)
 
         url = f"http://www.omdbapi.com/?t={movie_name}&apikey={api_key}"
         response = requests.get(url, timeout=15)
 
-        if response.status_code == 200:
+        if response.status_code == STATUS_200_OK:
             data = response.json()
             if data.get("Response") == "True":
                 return {
@@ -313,12 +311,13 @@ class MovieAlchemyApp:
         """Search for a movie by title using the OMDb API."""
         api_key = os.getenv("OMDB_API_KEY")
         if not api_key:
-            raise ValueError("OMDB_API_KEY environment variable is not set.")
+            err_msg = "OMDB_API_KEY environment variable is not set."
+            raise ValueError(err_msg)
 
         url = f"http://www.omdbapi.com/?s={title}&apikey={api_key}"
         response = requests.get(url, timeout=15)
 
-        if response.status_code == 200:
+        if response.status_code == STATUS_200_OK:
             data = response.json()
             if data.get("Response") == "True":
                 return data.get("Search", [])
@@ -339,14 +338,14 @@ def populate_sample_data(data_manager: DataManager) -> None:
     movie1 = Movie(
         name="Inception",
         director="Christopher Nolan",
-        year=2010,
+        year="2010",
         poster_url="https://example.com/inception.jpg",
         imdb_id="tt1375666",
     )
     movie2 = Movie(
         name="The Matrix",
         director="The Wachowskis",
-        year=1999,
+        year="1999",
         poster_url="https://example.com/matrix.jpg",
         imdb_id="tt0133093",
     )
