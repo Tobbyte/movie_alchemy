@@ -67,7 +67,7 @@ class DataManager:
         self,
         name: str,
         director: str | None = None,
-        year: int | None = None,
+        year: str | None = None,
         poster_url: str | None = None,
         imdb_id: str | None = None,
     ) -> Movie:

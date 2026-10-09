@@ -59,7 +59,7 @@ class Movie(Base):
         self,
         name: str,
         director: str | None = None,
-        year: int | None = None,
+        year: str | None = None,  # data from ombd could be "2013-2014"
         poster_url: str | None = None,
         imdb_id: str | None = None,
     ) -> None:
@@ -77,7 +77,7 @@ class Movie(Base):
     )
     name: Mapped[str] = mapped_column(String)
     director: Mapped[str | None] = mapped_column(String, default=None)
-    year: Mapped[int | None] = mapped_column(Integer, default=None)
+    year: Mapped[str | None] = mapped_column(Integer, default=None)
     poster_url: Mapped[str | None] = mapped_column(String, default=None)
     imdb_id: Mapped[str | None] = mapped_column(String, default=None)
 

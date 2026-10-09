@@ -39,7 +39,7 @@ class DB:
     def set_sqlite_pragma(
         self,
         dbapi_connection: sqlite3.Connection,
-        _: Any,
+        _: Any,  # noqa: ANN401
     ) -> None:
         """Set PRAGMA foreign_keys=ON for each connection."""
         dbapi_connection.execute("PRAGMA foreign_keys=ON")
