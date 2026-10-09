@@ -84,7 +84,7 @@ class Movie(Base):
 
     def __repr__(self) -> str:
         """Create String representation."""
-        return f"User(id: {self.id}, name: {self.name})"
+        return f"Movie(id: {self.id}, name: {self.name})"
 
     def __str__(self) -> str:
         """Create String representation."""
@@ -126,7 +126,7 @@ class UsersFavorite(Base):
 
     def __repr__(self) -> str:
         """Create String representation."""
-        return f"User(id: {self.user_id}, name: {self.movie_id})"
+        return f"Favorite(id: {self.user_id}, name: {self.movie_id})"
 
     def __str__(self) -> str:
         """Create String representation."""
