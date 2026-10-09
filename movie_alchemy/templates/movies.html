@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 {% block content %}
-<h1> {{ user_name }}s Movies </h1>
+<header class="page-header compact-header">
+    <p class="eyebrow">Personal collection</p>
+    <h1>{{ user_name }}'s Movies</h1>
+</header>
 <div search_container>
     <form action="{{ url_for('users_movies', user_id=user_id) }}" method="post">
         <label for="movie_name">Movie name:</label>
         <input type="text" id="movie_name" name="movie_name" required>
-        <button type="submit">Search Movie</button>
+        <button type="submit"><span aria-hidden="true">+</span> Find a movie</button>
         </form>
 </div>
     {% if error %}
@@ -20,7 +23,7 @@
             <form action="{{ url_for('users_movies_save', user_id=user_id) }}" method="post">
                 <input type="hidden" name="movie_name" value="{{ suggestion.Title }}">
                 {{ suggestion.Title }} ({{ suggestion.Year }})
-                <button>Auswählen</button>
+                <button><span aria-hidden="true">+</span> Add to shelf</button>
             </form>
             {% endfor %}
         </ul>
@@ -29,12 +32,15 @@
         {% for movie in movies %}
         <div class="movie-card">
             <form action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
-                <button type="submit" aria-label="Remove {{ movie.name }} from favorites">x</button>
+                <button type="submit" aria-label="Remove {{ movie.name }} from favorites">&times;</button>
             </form>
             <h2>{{ movie.name }}</h2>
             <p>Director: {{ movie.director }}</p>
             <p>Year: {{ movie.year }}</p>
-            <img src="{{ movie.poster_url }}" alt="{{ movie.name }} poster" class="poster">
+            <div class="poster-frame">
+                <img src="{{ movie.poster_url }}" alt="{{ movie.name }} poster" class="poster"
+                    onerror="this.hidden = true; this.parentElement.classList.add('poster-missing');">
+            </div>
         </div>
         {% endfor %}
     </div>

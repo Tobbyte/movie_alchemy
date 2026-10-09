@@ -1,6 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
-<h1> Users</h1>
+<header class="page-header">
+    <p class="eyebrow">Your personal cinema shelf</p>
+    <h1>Welcome to Movie Alchemy</h1>
+    <p class="intro">Keep your favorite films close, discover something new, and build a collection worth revisiting.</p>
+</header>
+<section class="user-section" aria-labelledby="users-heading">
+<h2 id="users-heading"><span class="section-icon" aria-hidden="true">01</span> Choose a collection</h2>
 {% if error %}
 <p class="error">{{ error }}</p>
 {% endif %}
@@ -14,6 +20,7 @@
 <form action="{{ url_for('users') }}" method="post">
     <label for="name">Name:</label>
     <input type="text" id="name" name="name" required>
-    <button type="submit">Create User</button>
+    <button type="submit"><span aria-hidden="true">+</span> Create User</button>
 </form>
+</section>
 {% endblock %}

@@ -4,14 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel=" stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <title>Movie Alchemy</title>
-    <nav class="navbar">
-        <a href="{{ url_for('index') }}">Home</a>
-
 </head>
 
 <body>
+    <nav class="navbar">
+        <a class="brand" href="{{ url_for('index') }}">
+            <span class="brand-mark" aria-hidden="true">M</span>
+            <span>Movie Alchemy</span>
+        </a>
+    </nav>
     <main class="container">
         {% block content %}{% endblock %}
     </main>
