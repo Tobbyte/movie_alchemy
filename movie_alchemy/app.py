@@ -21,12 +21,11 @@ from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from models import Movie, UsersFavorite
 from setup_db import DB
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug import Response
 from werkzeug.exceptions import HTTPException
-
-from movie_alchemy.models import Movie, UsersFavorite
 
 
 class InvalidParamError(Exception):

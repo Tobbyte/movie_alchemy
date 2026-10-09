@@ -4,6 +4,7 @@ import sqlite3
 from typing import Any
 
 from config import DB_PATH
+from models import Base
 from sqlalchemy import (
     create_engine,
     event,
@@ -11,8 +12,6 @@ from sqlalchemy import (
 from sqlalchemy.orm import (
     sessionmaker,
 )
-
-from movie_alchemy.models import Base
 
 
 class DB:
