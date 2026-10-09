@@ -152,6 +152,12 @@ class MovieAlchemyApp:
             methods=["POST"],
         )
 
+        self.app.add_url_rule(
+            "/users/<int:user_id>/movies/<int:movie_id>/delete",
+            view_func=self.delete_favorite_movie,
+            methods=["POST"],
+        )
+
     ### route handlers ###
 
     def index(self, error: str | None = None) -> str | tuple[str, int]:
@@ -346,6 +352,24 @@ class MovieAlchemyApp:
 
         self.data_manager.save_object(movie)
 
+        return redirect(url_for("users_movies", user_id=user_id), 303)
+
+    def delete_favorite_movie(
+        self,
+        user_id: int,
+        movie_id: int,
+    ) -> Response | tuple[str, int]:
+        """Remove a movie from a user's favorites."""
+        user = self.data_manager.get_user_by_id(user_id)
+        movie = self.data_manager.get_movie_by_id(movie_id)
+
+        if not user or not movie:
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
+
+        self.data_manager.delete_movie_by_id(movie_id)
         return redirect(url_for("users_movies", user_id=user_id), 303)
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:

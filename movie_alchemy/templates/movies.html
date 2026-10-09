@@ -28,6 +28,9 @@
     <div class="movies-container">
         {% for movie in movies %}
         <div class="movie-card">
+            <form action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
+                <button type="submit" aria-label="Remove {{ movie.name }} from favorites">x</button>
+            </form>
             <h2>{{ movie.name }}</h2>
             <p>Director: {{ movie.director }}</p>
             <p>Year: {{ movie.year }}</p>
