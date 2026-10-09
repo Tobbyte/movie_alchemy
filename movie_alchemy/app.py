@@ -277,9 +277,9 @@ class MovieAlchemyApp:
         user_id: int,
     ) -> Response | tuple[str, int]:
         """Save a movie to a user's favorites."""
-        movie_name = request.form.get("movie_name", "").strip()
+        imdb_id = request.form.get("imdb_id", "").strip()
 
-        if not movie_name:
+        if not imdb_id:
             return redirect(
                 url_for(
                     "users_movies",
@@ -288,7 +288,7 @@ class MovieAlchemyApp:
                 ),
             )
 
-        omdb_movie = self.fetch_omdb_data(movie_name)
+        omdb_movie = self.fetch_omdb_data(imdb_id=imdb_id)
 
         if omdb_movie:
             if omdb_movie.get("error"):
@@ -371,12 +371,15 @@ class MovieAlchemyApp:
         self.data_manager.delete_favorite(user_id=user_id, movie_id=movie_id)
         return redirect(url_for("users_movies", user_id=user_id), 303)
 
-    def fetch_omdb_data(self, movie_name: str) -> dict | None:
-        """Fetch movie data from the OMDb API by title."""
+    def fetch_omdb_data(
+        self,
+        imdb_id: str,
+    ) -> dict | None:
+        """Fetch movie data from OMDb by IMDb ID."""
         try:
             response = requests.get(
                 OMBD_URL,
-                params={"t": movie_name, "apikey": self.api_key},
+                params={"i": imdb_id, "apikey": self.api_key},
                 timeout=15,
             )
             data = response.json()
