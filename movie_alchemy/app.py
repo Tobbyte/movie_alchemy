@@ -18,10 +18,11 @@ from config import (
 )
 from datamanager import DataManager
 from dotenv import load_dotenv
-from flask import Flask, jsonify, redirect, render_template, request, url_for
+from flask import Flask, redirect, render_template, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from setup_db import DB
+from sqlalchemy.exc import SQLAlchemyError
 from werkzeug import Response
 from werkzeug.exceptions import HTTPException
 
@@ -62,11 +63,13 @@ class MovieAlchemyApp:
             raise ValueError(err_msg)
 
     def setup_error_handlers(self) -> None:
-        """Register JSON error handlers for the API application."""
+        """Register HTML error handlers for the web application."""
         self.app.register_error_handler(404, self.api_page_not_found)
         self.app.register_error_handler(405, self.api_method_not_allowed)
         self.app.register_error_handler(429, self.api_too_many_requests)
         self.app.register_error_handler(500, self.api_internal_server_error)
+        self.app.register_error_handler(SQLAlchemyError, self.api_db_error)
+        self.app.register_error_handler(RuntimeError, self.api_db_error)
         self.app.register_error_handler(
             InvalidParamError,
             self.api_invalid_params,
@@ -78,29 +81,41 @@ class MovieAlchemyApp:
         return render_template("404.html")
 
     @staticmethod
-    def api_method_not_allowed(_: HTTPException) -> tuple[Response, int]:
-        """Return a JSON response for method forbidden."""
-        return jsonify({"error": API_ERR_METHOD_NOT_ALLOWED}), 405
+    def api_method_not_allowed(_: HTTPException) -> tuple[str, int]:
+        """Render the method-not-allowed page."""
+        return (
+            render_template("404.html", error=API_ERR_METHOD_NOT_ALLOWED),
+            405,
+        )
 
     @staticmethod
-    def api_too_many_requests(_: HTTPException) -> tuple[Response, int]:
-        """Return JSON for when rate limit is exceeded."""
-        return jsonify({"error": API_ERR_TOO_MANY_REQUESTS}), 429
+    def api_too_many_requests(_: HTTPException) -> tuple[str, int]:
+        """Render the rate-limit error page."""
+        return (
+            render_template("500.html", error=API_ERR_TOO_MANY_REQUESTS),
+            429,
+        )
 
     @staticmethod
-    def api_internal_server_error(_: Exception) -> str:
-        """Return a JSON response for internal API errors."""
-        return render_template("500.html")
+    def api_internal_server_error(_: Exception) -> tuple[str, int]:
+        """Render the internal server error page."""
+        return (
+            render_template("500.html", error=API_ERR_INTERNAL_SERVER_ERROR),
+            500,
+        )
 
     @staticmethod
-    def api_invalid_params(error: InvalidParamError) -> tuple[Response, int]:
-        """Return a JSON 400 naming the invalid parameter."""
-        return jsonify({"error": str(error)}), 400
+    def api_invalid_params(error: InvalidParamError) -> tuple[str, int]:
+        """Render a 400 page naming the invalid parameter."""
+        return render_template("500.html", error=str(error)), 400
 
     @staticmethod
-    def api_db_error(_: Exception) -> str:
-        """Return a JSON 500 for database errors."""
-        return render_template("500.html")
+    def api_db_error(_: Exception) -> tuple[str, int]:
+        """Render the database error page."""
+        return (
+            render_template("500.html", error=API_ERR_INTERNAL_SERVER_ERROR),
+            500,
+        )
 
     def setup_routes(self) -> None:
         """Set up the API routes for the Flask app."""
@@ -139,7 +154,7 @@ class MovieAlchemyApp:
 
     ### route handlers ###
 
-    def index(self, error: dict | None = None) -> str:
+    def index(self, error: str | None = None) -> str | tuple[str, int]:
         """Render the index page with a list of users.
 
         for /
@@ -147,10 +162,17 @@ class MovieAlchemyApp:
         try:
             users = self.data_manager.get_users()
         except RuntimeError:
-            return render_template("500.html")
+            return (
+                render_template(
+                    "500.html",
+                    error=API_ERR_INTERNAL_SERVER_ERROR,
+                ),
+                500,
+            )
+        error = error or request.args.get("error")
         return render_template("index.html", users=users, error=error)
 
-    def users(self) -> Response | tuple[Response, int]:
+    def users(self) -> str | Response | tuple[str, int]:
         """List all users or create a new user.
 
         for /users
@@ -159,9 +181,9 @@ class MovieAlchemyApp:
             return self.create_user()
 
         users = self.data_manager.get_users()
-        return jsonify([user.as_dict() for user in users]), 200
+        return render_template("index.html", users=users)
 
-    def users_movies(self, user_id: int) -> str | tuple[Response, int]:
+    def users_movies(self, user_id: int) -> str | Response | tuple[str, int]:
         """List all movies for a user or add a new one.
 
         for /users/<user_id>/movies
@@ -180,21 +202,16 @@ class MovieAlchemyApp:
         movie_suggestions: dict | None = None,
         search_query: str | None = None,
         error: str | None = None,
-    ) -> str | tuple[Response, int]:
+    ) -> str | tuple[str, int]:
         """Render a user's movies and optional OMDb suggestions."""
         user = self.data_manager.get_user_by_id(user_id)
         if not user:
-            return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
-
-        favorites = [
-            self.data_manager.get_movie_by_id(fav.movie_id)
-            for fav in self.data_manager.db
-            .session_factory()
-            .query(
-                UsersFavorite,
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
             )
-            .filter_by(user_id=user_id)
-        ]
+
+        favorites = self.data_manager.get_favorite_movies(user_id)
         return render_template(
             "movies.html",
             user_name=user.name,
@@ -205,12 +222,15 @@ class MovieAlchemyApp:
             error=error,
         )
 
-    def create_user(self) -> Response:
+    def create_user(self) -> Response | tuple[str, int]:
         """Create a new user."""
         name = request.form.get("name", "").strip()
 
         if not name:
-            return redirect(url_for("index"), 404)
+            return redirect(
+                url_for("index", error=API_ERR_INVALID_REQUEST_DATA),
+                303,
+            )
 
         self.data_manager.create_user(name)
         return redirect(url_for("index"), 303)
@@ -218,12 +238,19 @@ class MovieAlchemyApp:
     def users_movies_add(
         self,
         user_id: int,
-    ) -> tuple[Response, int] | str:
+    ) -> str | Response | tuple[str, int]:
         """Add a new movie."""
         movie_name = request.form.get("movie_name", "").strip()
 
         if not movie_name:
-            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+            return redirect(
+                url_for(
+                    "users_movies",
+                    user_id=user_id,
+                    error=API_ERR_INVALID_REQUEST_DATA,
+                ),
+                303,
+            )
 
         results = self.search_ombd_by_title(movie_name)
 
@@ -243,7 +270,7 @@ class MovieAlchemyApp:
     def users_movies_save(
         self,
         user_id: int,
-    ) -> tuple[Response, int] | Response | str:
+    ) -> Response | tuple[str, int]:
         """Save a movie to a user's favorites."""
         movie_name = request.form.get("movie_name", "").strip()
 
@@ -285,43 +312,54 @@ class MovieAlchemyApp:
         self,
         user_id: int,
         movie_id: int,
-    ) -> tuple[Response, int]:
+    ) -> Response | tuple[str, int]:
         """Update movie details for a user's favorite movie."""
-        data = request.get_json(silent=True)
+        data = request.get_json(silent=True) or request.form.to_dict()
 
         if (
             not data
             or not isinstance(data, dict)
-            or "movie_id" not in data
-            or "user_id" not in data
             or "new_title" not in data
+            or not str(data["new_title"]).strip()
         ):
-            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+            return redirect(
+                url_for(
+                    "users_movies",
+                    user_id=user_id,
+                    error=API_ERR_INVALID_REQUEST_DATA,
+                ),
+                303,
+            )
 
         # Check if the user and movie exist
         user = self.data_manager.get_user_by_id(user_id)
         movie = self.data_manager.get_movie_by_id(movie_id)
 
         if not user or not movie:
-            return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
 
         # Update the movie details
-        movie.name = data["new_title"]
+        movie.name = str(data["new_title"]).strip()
 
         self.data_manager.save_object(movie)
 
-        return jsonify({"message": "Movie details updated successfully"}), 200
+        return redirect(url_for("users_movies", user_id=user_id), 303)
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:
         """Fetch movie data from the OMDb API by title."""
         url = OMBD_GET_TITLE_URL.format(title=movie_name, api_key=self.api_key)
         try:
             response = requests.get(url, timeout=15)
-        except requests.RequestException:
+            data = response.json()
+        except (requests.RequestException, ValueError):
             return {"error": OMBD_ERR_MSG}
 
+        if not isinstance(data, dict):
+            return {"error": OMBD_ERR_MSG}
         if response.status_code == STATUS_200_OK:
-            data = response.json()
             if data.get("Response") == "True":
                 return {
                     "title": data.get("Title"),
@@ -330,21 +368,25 @@ class MovieAlchemyApp:
                     "poster_url": data.get("Poster"),
                     "imdb_id": data.get("imdbID"),
                 }
-        return None
+            return {"error": data.get("Error", OMBD_ERR_MSG)}
+        return {"error": OMBD_ERR_MSG}
 
     def search_ombd_by_title(self, title: str) -> dict | None:
         """Search for a movie by title using the OMDb API."""
         url = OMBD_SEARCH_URL.format(title=title, api_key=self.api_key)
         try:
             response = requests.get(url, timeout=15)
-        except requests.RequestException:
+            data = response.json()
+        except (requests.RequestException, ValueError):
             return {"error": OMBD_ERR_MSG}
 
+        if not isinstance(data, dict):
+            return {"error": OMBD_ERR_MSG}
         if response.status_code == STATUS_200_OK:
-            data = response.json()
             if data.get("Response") == "True":
                 return data.get("Search", [])
-        return None
+            return {"error": data.get("Error", OMBD_ERR_MSG)}
+        return {"error": OMBD_ERR_MSG}
 
     def run(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Start the Flask app."""
