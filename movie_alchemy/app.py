@@ -315,6 +315,7 @@ class MovieAlchemyApp:
                     user_id=user_id,
                     error=API_ERR_INVALID_REQUEST_DATA,
                 ),
+                303,
             )
 
         omdb_movie = self.fetch_omdb_data(imdb_id=imdb_id)
@@ -327,6 +328,7 @@ class MovieAlchemyApp:
                         user_id=user_id,
                         error=omdb_movie.get("error"),
                     ),
+                    303,
                 )
             self.data_manager.add_movie_to_favorites(
                 user_id=user_id,
