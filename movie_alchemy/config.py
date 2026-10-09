@@ -12,7 +12,6 @@ OMBD_ERR_MSG = "There was an error at OMDb, try again later."
 LIMITER_DEFAULT_LIMIT = "100 per minute"
 MAX_FAVORITE_NOTE_LENGTH = 500
 
-API_ERR_INVALID_POST_ID = "Invalid post ID"
 API_ERR_INVALID_REQUEST_DATA = "Invalid request data"
 API_ERR_DUPLICATE_USER = (
     "That user name is already taken. Try again with another name."

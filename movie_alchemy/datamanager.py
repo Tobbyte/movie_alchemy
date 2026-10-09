@@ -52,15 +52,6 @@ class DataManager:
             err_msg = "Failed to retrieve user."
             raise RuntimeError(err_msg) from error
 
-    def get_movies(self) -> list[Movie]:
-        """Retrieve all movies from the database."""
-        try:
-            with self.db.session_factory.begin() as session:
-                return list(session.scalars(select(Movie)).all())
-        except SQLAlchemyError as error:
-            err_msg = "Failed to retrieve movies."
-            raise RuntimeError(err_msg) from error
-
     def get_movie_by_id(self, movie_id: int) -> Movie | None:
         """Retrieve a movie by its ID."""
         try:
@@ -88,28 +79,6 @@ class DataManager:
                 return [tuple(row) for row in session.execute(statement).all()]
         except SQLAlchemyError as error:
             err_msg = "Failed to retrieve favorite movies."
-            raise RuntimeError(err_msg) from error
-
-    def delete_movie_by_id(self, movie_id: int) -> None:
-        """Delete a movie by its ID."""
-        try:
-            with self.db.session_factory.begin() as session:
-                movie_to_delete = session.scalars(
-                    select(Movie).where(Movie.id == movie_id),
-                ).one_or_none()
-                if movie_to_delete:
-                    session.delete(movie_to_delete)
-        except SQLAlchemyError as error:
-            err_msg = "Failed to delete movie."
-            raise RuntimeError(err_msg) from error
-
-    def save_object(self, obj: User | Movie | UsersFavorite) -> None:
-        """Save a User or Movie object to the database."""
-        try:
-            with self.db.session_factory.begin() as session:
-                session.add(obj)
-        except SQLAlchemyError as error:
-            err_msg = "Failed to save database object."
             raise RuntimeError(err_msg) from error
 
     def add_movie_to_favorites(self, user_id: int, data: dict) -> None:
