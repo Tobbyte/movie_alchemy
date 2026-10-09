@@ -85,9 +85,22 @@ class DataManager:
         """Add a movie and its favorite relationship atomically."""
         try:
             with self.db.session_factory.begin() as session:
-                movie = session.scalars(
-                    select(Movie).where(Movie.imdb_id == data["imdb_id"]),
-                ).one_or_none()
+                movies = list(
+                    session.scalars(
+                        select(Movie).where(Movie.imdb_id == data["imdb_id"]),
+                    ).all(),
+                )
+                movie = next(
+                    (
+                        m
+                        for m in movies
+                        if session.get(
+                            UsersFavorite,
+                            (user_id, m.id),
+                        )
+                    ),
+                    movies[0] if movies else None,
+                )
                 if movie is None:
                     movie = Movie(
                         name=data["title"],
