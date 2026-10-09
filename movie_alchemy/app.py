@@ -389,7 +389,14 @@ class MovieAlchemyApp:
                 404,
             )
 
-        self.data_manager.delete_favorite(user_id=user_id, movie_id=movie_id)
+        if not self.data_manager.delete_favorite(
+            user_id=user_id,
+            movie_id=movie_id,
+        ):
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
         return redirect(url_for("users_movies", user_id=user_id), 303)
 
     def fetch_omdb_data(

@@ -66,7 +66,7 @@ class DataManager:
     def get_favorite_movies(
         self,
         user_id: int,
-    ) -> list[tuple[Movie, str | None]]:
+    ) -> list[tuple]:
         """Retrieve a user's favorite movies and notes."""
         try:
             with self.db.session_factory.begin() as session:
@@ -143,7 +143,7 @@ class DataManager:
             err_msg = "Failed to update favorite movie note."
             raise RuntimeError(err_msg) from error
 
-    def delete_favorite(self, user_id: int, movie_id: int) -> None:
+    def delete_favorite(self, user_id: int, movie_id: int) -> bool:
         """Remove a movie from a user's favorites."""
         try:
             with self.db.session_factory.begin() as session:
@@ -155,6 +155,8 @@ class DataManager:
                 ).one_or_none()
                 if favorite:
                     session.delete(favorite)
+                    return True
+                return False
         except SQLAlchemyError as error:
             err_msg = "Failed to delete favorite movie."
             raise RuntimeError(err_msg) from error
