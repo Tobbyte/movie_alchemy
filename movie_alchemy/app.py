@@ -23,15 +23,9 @@ from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-from models import Movie, UsersFavorite
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug import Response
-from werkzeug.exceptions import HTTPException
-
-
-class InvalidParamError(Exception):
-    """A query parameter is unknown or has an invalid value."""
-
+from werkzeug.exceptions import BadRequest, HTTPException
 
 load_dotenv()
 
@@ -43,9 +37,6 @@ class MovieAlchemyApp:
         """Initialize the MovieAlchemyApp."""
         self.app = Flask(__name__)
         self.data_manager = DataManager()
-        self.db = (
-            self.data_manager.db
-        )  # Access the DB instance from DataManager
         Limiter(
             key_func=get_remote_address,
             app=self.app,
@@ -66,19 +57,19 @@ class MovieAlchemyApp:
         """Register HTML error handlers for the web application."""
         self.app.register_error_handler(404, self.api_page_not_found)
         self.app.register_error_handler(405, self.api_method_not_allowed)
+        self.app.register_error_handler(400, self.api_bad_request)
         self.app.register_error_handler(429, self.api_too_many_requests)
         self.app.register_error_handler(500, self.api_internal_server_error)
         self.app.register_error_handler(SQLAlchemyError, self.api_db_error)
         self.app.register_error_handler(RuntimeError, self.api_db_error)
-        self.app.register_error_handler(
-            InvalidParamError,
-            self.api_invalid_params,
-        )
 
     @staticmethod
     def api_page_not_found(_: HTTPException) -> tuple[str, int]:
-        """Return a JSON response for 404."""
-        return render_template("404.html"), 404
+        """Render the page-not-found page."""
+        return (
+            render_template("404.html", error=API_ERR_404_NOT_FOUND),
+            404,
+        )
 
     @staticmethod
     def api_method_not_allowed(_: HTTPException) -> tuple[str, int]:
@@ -89,10 +80,26 @@ class MovieAlchemyApp:
         )
 
     @staticmethod
+    def api_bad_request(_: BadRequest) -> tuple[str, int]:
+        """Render the invalid-request page."""
+        return (
+            render_template(
+                "500.html",
+                error=API_ERR_INVALID_REQUEST_DATA,
+                hint="Please check your input and try again.",
+            ),
+            400,
+        )
+
+    @staticmethod
     def api_too_many_requests(_: HTTPException) -> tuple[str, int]:
         """Render the rate-limit error page."""
         return (
-            render_template("500.html", error=API_ERR_TOO_MANY_REQUESTS),
+            render_template(
+                "500.html",
+                error=API_ERR_TOO_MANY_REQUESTS,
+                hint="Please wait a moment and try again.",
+            ),
             429,
         )
 
@@ -100,20 +107,23 @@ class MovieAlchemyApp:
     def api_internal_server_error(_: Exception) -> tuple[str, int]:
         """Render the internal server error page."""
         return (
-            render_template("500.html", error=API_ERR_INTERNAL_SERVER_ERROR),
+            render_template(
+                "500.html",
+                error=API_ERR_INTERNAL_SERVER_ERROR,
+                hint="Nothing you can do. Try again later.",
+            ),
             500,
         )
-
-    @staticmethod
-    def api_invalid_params(error: InvalidParamError) -> tuple[str, int]:
-        """Render a 400 page naming the invalid parameter."""
-        return render_template("500.html", error=str(error)), 400
 
     @staticmethod
     def api_db_error(_: Exception) -> tuple[str, int]:
         """Render the database error page."""
         return (
-            render_template("500.html", error=API_ERR_INTERNAL_SERVER_ERROR),
+            render_template(
+                "500.html",
+                error=API_ERR_INTERNAL_SERVER_ERROR,
+                hint="Nothing you can do. Try again later.",
+            ),
             500,
         )
 
@@ -160,7 +170,7 @@ class MovieAlchemyApp:
 
     ### route handlers ###
 
-    def index(self, error: str | None = None) -> str | tuple[str, int]:
+    def index(self) -> str | tuple[str, int]:
         """Render the index page with a list of users.
 
         for /
@@ -175,7 +185,7 @@ class MovieAlchemyApp:
                 ),
                 500,
             )
-        error = error or request.args.get("error")
+        error = request.args.get("error")
         return render_template("index.html", users=users, error=error)
 
     def users(self) -> str | Response | tuple[str, int]:
