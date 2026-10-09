@@ -78,7 +78,7 @@ class Movie(Base):
     )
     name: Mapped[str] = mapped_column(String)
     director: Mapped[str | None] = mapped_column(String, default=None)
-    year: Mapped[str | None] = mapped_column(Integer, default=None)
+    year: Mapped[str | None] = mapped_column(String, default=None)
     poster_url: Mapped[str | None] = mapped_column(String, default=None)
     imdb_id: Mapped[str | None] = mapped_column(String, default=None)
 
