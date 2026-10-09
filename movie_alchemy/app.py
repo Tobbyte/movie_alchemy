@@ -204,7 +204,7 @@ class MovieAlchemyApp:
     def render_movies_page(
         self,
         user_id: int,
-        movie_suggestions: dict | None = None,
+        movie_suggestions: list[dict] | None = None,
         search_query: str | None = None,
         error: str | None = None,
     ) -> str | tuple[str, int]:
@@ -259,11 +259,11 @@ class MovieAlchemyApp:
 
         results = self.search_ombd_by_title(movie_name)
 
-        if isinstance(results, dict) and results.get("error"):
+        if results and results[0].get("error"):
             return self.render_movies_page(
                 user_id,
                 search_query=movie_name,
-                error=results["error"],
+                error=results[0]["error"],
             )
 
         return self.render_movies_page(
@@ -400,7 +400,7 @@ class MovieAlchemyApp:
             return {"error": data.get("Error", OMBD_ERR_MSG)}
         return {"error": OMBD_ERR_MSG}
 
-    def search_ombd_by_title(self, title: str) -> dict | None:
+    def search_ombd_by_title(self, title: str) -> list[dict]:
         """Search for a movie by title using the OMDb API."""
         try:
             response = requests.get(
@@ -410,15 +410,15 @@ class MovieAlchemyApp:
             )
             data = response.json()
         except (requests.RequestException, ValueError):
-            return {"error": OMBD_ERR_MSG}
+            return [{"error": OMBD_ERR_MSG}]
 
         if not isinstance(data, dict):
-            return {"error": OMBD_ERR_MSG}
+            return [{"error": OMBD_ERR_MSG}]
         if response.status_code == STATUS_200_OK:
             if data.get("Response") == "True":
                 return data.get("Search", [])
-            return {"error": data.get("Error", OMBD_ERR_MSG)}
-        return {"error": OMBD_ERR_MSG}
+            return [{"error": data.get("Error", OMBD_ERR_MSG)}]
+        return [{"error": OMBD_ERR_MSG}]
 
     def run(self, **kwargs: Any) -> None:  # noqa: ANN401
         """Start the Flask app."""
