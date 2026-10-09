@@ -1,10 +1,9 @@
 """Module for managing database operations."""
 
+from models import Movie, User, UsersFavorite
+from setup_db import DB
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
-
-from movie_alchemy.models import Movie, User, UsersFavorite
-from movie_alchemy.setup_db import DB
 
 
 class DuplicateUserError(RuntimeError):
