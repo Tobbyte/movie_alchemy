@@ -1,4 +1,5 @@
 """Movie Alchemy app."""
+
 import os
 from typing import Any
 
@@ -11,9 +12,8 @@ from config import (
     API_ERR_TOO_MANY_REQUESTS,
     LIMITER_DEFAULT_LIMIT,
     OMBD_ERR_MSG,
-    OMBD_GET_TITLE_URL,
     OMBD_KEY_NOT_SET_ERROR,
-    OMBD_SEARCH_URL,
+    OMBD_URL,
     STATUS_200_OK,
 )
 from datamanager import DataManager
@@ -75,9 +75,9 @@ class MovieAlchemyApp:
         )
 
     @staticmethod
-    def api_page_not_found(_: HTTPException) -> str:
+    def api_page_not_found(_: HTTPException) -> tuple[str, int]:
         """Return a JSON response for 404."""
-        return render_template("404.html")
+        return render_template("404.html"), 404
 
     @staticmethod
     def api_method_not_allowed(_: HTTPException) -> tuple[str, int]:
@@ -373,9 +373,12 @@ class MovieAlchemyApp:
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:
         """Fetch movie data from the OMDb API by title."""
-        url = OMBD_GET_TITLE_URL.format(title=movie_name, api_key=self.api_key)
         try:
-            response = requests.get(url, timeout=15)
+            response = requests.get(
+                OMBD_URL,
+                params={"t": movie_name, "apikey": self.api_key},
+                timeout=15,
+            )
             data = response.json()
         except (requests.RequestException, ValueError):
             return {"error": OMBD_ERR_MSG}
@@ -396,9 +399,12 @@ class MovieAlchemyApp:
 
     def search_ombd_by_title(self, title: str) -> dict | None:
         """Search for a movie by title using the OMDb API."""
-        url = OMBD_SEARCH_URL.format(title=title, api_key=self.api_key)
         try:
-            response = requests.get(url, timeout=15)
+            response = requests.get(
+                OMBD_URL,
+                params={"s": title, "apikey": self.api_key},
+                timeout=15,
+            )
             data = response.json()
         except (requests.RequestException, ValueError):
             return {"error": OMBD_ERR_MSG}
