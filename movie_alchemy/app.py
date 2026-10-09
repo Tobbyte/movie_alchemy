@@ -12,6 +12,7 @@ from config import (
     API_ERR_METHOD_NOT_ALLOWED,
     API_ERR_TOO_MANY_REQUESTS,
     LIMITER_DEFAULT_LIMIT,
+    MAX_FAVORITE_NOTE_LENGTH,
     OMBD_ERR_MSG,
     OMBD_KEY_NOT_SET_ERROR,
     OMBD_URL,
@@ -23,7 +24,6 @@ from flask import Flask, redirect, render_template, request, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from models import Movie, UsersFavorite
-from setup_db import DB
 from sqlalchemy.exc import SQLAlchemyError
 from werkzeug import Response
 from werkzeug.exceptions import HTTPException
@@ -148,7 +148,7 @@ class MovieAlchemyApp:
 
         self.app.add_url_rule(
             "/users/<int:user_id>/movies/<int:movie_id>/update",
-            view_func=self.update_movie_details,
+            view_func=self.update_movie_note,
             methods=["POST"],
         )
 
@@ -320,20 +320,27 @@ class MovieAlchemyApp:
 
         return redirect(url_for("users_movies", user_id=user_id), 303)
 
-    def update_movie_details(
+    def update_movie_note(
         self,
         user_id: int,
         movie_id: int,
     ) -> Response | tuple[str, int]:
-        """Update movie details for a user's favorite movie."""
+        """Update the note for a user's favorite movie."""
         data = request.get_json(silent=True) or request.form.to_dict()
 
-        if (
-            not data
-            or not isinstance(data, dict)
-            or "new_title" not in data
-            or not str(data["new_title"]).strip()
-        ):
+        if not isinstance(data, dict) or "note" not in data:
+            return redirect(
+                url_for(
+                    "users_movies",
+                    user_id=user_id,
+                    error=API_ERR_INVALID_REQUEST_DATA,
+                ),
+                303,
+            )
+
+        raw_note = data["note"]
+        note = "" if raw_note is None else str(raw_note).strip()
+        if len(note) > MAX_FAVORITE_NOTE_LENGTH:
             return redirect(
                 url_for(
                     "users_movies",
@@ -345,18 +352,16 @@ class MovieAlchemyApp:
 
         # Check if the user and movie exist
         user = self.data_manager.get_user_by_id(user_id)
-        movie = self.data_manager.get_movie_by_id(movie_id)
 
-        if not user or not movie:
+        if not user or not self.data_manager.update_favorite_note(
+            user_id=user_id,
+            movie_id=movie_id,
+            note=note or None,
+        ):
             return (
                 render_template("404.html", error=API_ERR_404_NOT_FOUND),
                 404,
             )
-
-        # Update the movie details
-        movie.name = str(data["new_title"]).strip()
-
-        self.data_manager.save_object(movie)
 
         return redirect(url_for("users_movies", user_id=user_id), 303)
 

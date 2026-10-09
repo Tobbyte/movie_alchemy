@@ -10,6 +10,7 @@ OMBD_URL = "https://www.omdbapi.com/"
 OMBD_KEY_NOT_SET_ERROR = "OMDB_API_KEY environment variable is not set."
 OMBD_ERR_MSG = "There was an error at OMDb, try again later."
 LIMITER_DEFAULT_LIMIT = "100 per minute"
+MAX_FAVORITE_NOTE_LENGTH = 500
 
 API_ERR_INVALID_POST_ID = "Invalid post ID"
 API_ERR_INVALID_REQUEST_DATA = "Invalid request data"

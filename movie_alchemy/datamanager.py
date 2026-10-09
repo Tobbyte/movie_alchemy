@@ -72,17 +72,20 @@ class DataManager:
             err_msg = "Failed to retrieve movie."
             raise RuntimeError(err_msg) from error
 
-    def get_favorite_movies(self, user_id: int) -> list[Movie]:
-        """Retrieve a user's favorite movies."""
+    def get_favorite_movies(
+        self,
+        user_id: int,
+    ) -> list[tuple[Movie, str | None]]:
+        """Retrieve a user's favorite movies and notes."""
         try:
             with self.db.session_factory.begin() as session:
                 statement = (
-                    select(Movie)
+                    select(Movie, UsersFavorite.note)
                     .join(UsersFavorite, UsersFavorite.movie_id == Movie.id)
                     .where(UsersFavorite.user_id == user_id)
                     .order_by(UsersFavorite.created_at.desc())
                 )
-                return list(session.scalars(statement).all())
+                return [tuple(row) for row in session.execute(statement).all()]
         except SQLAlchemyError as error:
             err_msg = "Failed to retrieve favorite movies."
             raise RuntimeError(err_msg) from error
@@ -117,6 +120,29 @@ class DataManager:
                 session.add(favorite)
         except SQLAlchemyError as error:
             err_msg = "Failed to save favorite movie."
+            raise RuntimeError(err_msg) from error
+
+    def update_favorite_note(
+        self,
+        user_id: int,
+        movie_id: int,
+        note: str | None,
+    ) -> bool:
+        """Update the note attached to a user's favorite movie."""
+        try:
+            with self.db.session_factory.begin() as session:
+                favorite = session.scalars(
+                    select(UsersFavorite).where(
+                        UsersFavorite.user_id == user_id,
+                        UsersFavorite.movie_id == movie_id,
+                    ),
+                ).one_or_none()
+                if favorite:
+                    favorite.note = note
+                    return True
+                return False
+        except SQLAlchemyError as error:
+            err_msg = "Failed to update favorite movie note."
             raise RuntimeError(err_msg) from error
 
     def delete_favorite(self, user_id: int, movie_id: int) -> None:

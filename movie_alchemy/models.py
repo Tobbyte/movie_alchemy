@@ -106,10 +106,16 @@ class UsersFavorite(Base):
 
     __tablename__ = "user_favs"
 
-    def __init__(self, user_id: int, movie_id: int) -> None:
+    def __init__(
+        self,
+        user_id: int,
+        movie_id: int,
+        note: str | None = None,
+    ) -> None:
         """Initialize the UsersFavorites instance."""
         self.user_id = user_id
         self.movie_id = movie_id
+        self.note = note
 
     user_id: Mapped[int] = mapped_column(
         ForeignKey("users.id", ondelete="CASCADE"),
@@ -123,6 +129,7 @@ class UsersFavorite(Base):
         DateTime,
         server_default=func.now(),
     )
+    note: Mapped[str | None] = mapped_column(String(500), default=None)
 
     def __repr__(self) -> str:
         """Create String representation."""
@@ -137,4 +144,5 @@ class UsersFavorite(Base):
         return {
             "user_id": self.user_id,
             "movie_id": self.movie_id,
+            "note": self.note,
         }
