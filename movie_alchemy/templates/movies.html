@@ -32,19 +32,51 @@
     </div>
 {% endif %}
     <div class="movies-container">
-        {% for movie in movies %}
-        <div class="movie-card">
-            <form action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
-                <button type="submit" aria-label="Remove {{ movie.name }} from favorites">&times;</button>
-            </form>
-            <h2>{{ movie.name }}</h2>
-            <p>Director: {{ movie.director }}</p>
-            <p>Year: {{ movie.year }}</p>
-            <div class="poster-frame">
-                <img src="{{ movie.poster_url }}" alt="{{ movie.name }} poster" class="poster"
-                    onerror="this.hidden = true; this.parentElement.classList.add('poster-missing');">
+        {% for movie, note in movies %}
+        <div class="favorite-item">
+            <div class="movie-card">
+                <form class="delete-form" action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}"
+                    method="post">
+                    <button type="submit" aria-label="Remove {{ movie.name }} from favorites">&times;</button>
+                </form>
+                <h2>{{ movie.name }}</h2>
+                <p>Director: {{ movie.director }}</p>
+                <p>Year: {{ movie.year }}</p>
+                <div class="poster-frame">
+                    <img src="{{ movie.poster_url }}" alt="{{ movie.name }} poster" class="poster"
+                        onerror="this.hidden = true; this.parentElement.classList.add('poster-missing');">
+                </div>
+                </div>
+                <div class="note-editor">
+                    <div class="note-heading">
+                        <span>Note</span>
+                        <button type="button" class="edit-note-button" aria-label="Edit note for {{ movie.name }}">Edit</button>
+                    </div>
+                    <p class="note-display">{{ note or 'No note yet.' }}</p>
+                    <form class="note-form" action="{{ url_for('update_movie_note', user_id=user_id, movie_id=movie.id) }}"
+                        method="post">
+                        <label class="visually-hidden" for="note_{{ movie.id }}">Note</label>
+                        <textarea id="note_{{ movie.id }}" name="note" maxlength="500" rows="3" hidden>{{ note or '' }}</textarea>
+                        <button type="submit" class="save-note-button" hidden>Save</button>
+                    </form>
             </div>
         </div>
         {% endfor %}
     </div>
+<script>
+    document.querySelectorAll('.note-editor').forEach((editor) => {
+        const editButton = editor.querySelector('.edit-note-button');
+        const saveButton = editor.querySelector('.save-note-button');
+        const noteDisplay = editor.querySelector('.note-display');
+        const textarea = editor.querySelector('textarea');
+
+        editButton.addEventListener('click', () => {
+            noteDisplay.hidden = true;
+            editButton.hidden = true;
+            textarea.hidden = false;
+            saveButton.hidden = false;
+            textarea.focus();
+        });
+    });
+</script>
 {% endblock %}

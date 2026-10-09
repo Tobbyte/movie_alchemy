@@ -274,26 +274,31 @@ button:focus-visible {
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     justify-content: center;
     gap: 1rem;
+    margin-top: 30px;
 }
 
+.favorite-item {
+    width: 100%;
+    max-width: 200px;
+}
 .movie-card {
     position: relative;
     overflow: hidden;
     width: 100%;
-    max-width: 200px;
+    max-width: none;
     border: 1px solid var(--line);
     background: var(--surface);
     box-shadow: var(--shadow);
 }
 
-.movie-card form {
+.movie-card .delete-form {
     position: absolute;
     z-index: 1;
     top: 0.75rem;
     right: 0.75rem;
 }
 
-.movie-card form button {
+.movie-card .delete-form button {
     width: 2rem;
     height: 2rem;
     padding: 0;
@@ -321,6 +326,78 @@ button:focus-visible {
     font-size: 0.82rem;
 }
 
+.note-editor {
+    margin-top: 0.65rem;
+    padding: 0.65rem;
+    border: 1px solid var(--line);
+    background: #f4f6f3;
+}
+
+.note-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    color: var(--muted);
+    font-family: Arial, sans-serif;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.note-heading button,
+.save-note-button {
+    padding: 0.3rem 0.5rem;
+    font-size: 0.65rem;
+}
+
+.note-display {
+    min-height: 2.4rem;
+    margin: 0.45rem 0 0;
+    color: var(--ink) !important;
+    font-family: Georgia, 'Times New Roman', serif !important;
+    font-size: 0.82rem !important;
+    overflow-wrap: anywhere;
+}
+
+.note-form {
+    display: block;
+    margin-top: 0.45rem;
+}
+
+.note-form textarea {
+    display: block;
+    width: 100%;
+    min-height: 4rem;
+    resize: vertical;
+    padding: 0.45rem;
+    border: 1px solid var(--line);
+    background: var(--surface);
+    color: var(--ink);
+    font: inherit;
+    font-size: 0.82rem;
+}
+
+.note-form textarea[hidden],
+.note-form button[hidden] {
+    display: none;
+}
+
+.note-form textarea:focus {
+    border-color: var(--accent);
+    outline: 3px solid rgba(216, 102, 69, 0.18);
+}
+
+.visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
 .poster-frame {
     position: relative;
     display: block;
