@@ -73,6 +73,7 @@ class DataManager:
                     select(Movie)
                     .join(UsersFavorite, UsersFavorite.movie_id == Movie.id)
                     .where(UsersFavorite.user_id == user_id)
+                    .order_by(UsersFavorite.created_at.desc())
                 )
                 return list(session.scalars(statement).all())
         except SQLAlchemyError as error:
