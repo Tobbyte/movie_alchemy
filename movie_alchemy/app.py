@@ -284,6 +284,12 @@ class MovieAlchemyApp:
         user_id: int,
     ) -> Response | tuple[str, int]:
         """Save a movie to a user's favorites."""
+        if self.data_manager.get_user_by_id(user_id) is None:
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
+
         imdb_id = request.form.get("imdb_id", "").strip()
 
         if not imdb_id:
@@ -306,16 +312,9 @@ class MovieAlchemyApp:
                         error=omdb_movie.get("error"),
                     ),
                 )
-            new_movie = self.data_manager.add_movie(
-                name=omdb_movie.get("title"),  # pyright: ignore[reportArgumentType]
-                year=omdb_movie.get("year"),
-                director=omdb_movie.get("director"),
-                poster_url=omdb_movie.get("poster_url"),
-                imdb_id=omdb_movie.get("imdb_id"),
-            )
-            self.data_manager.add_favorite(
+            self.data_manager.add_movie_to_favorites(
                 user_id=user_id,
-                movie_id=new_movie.id,
+                data=omdb_movie,
             )
 
         return redirect(url_for("users_movies", user_id=user_id), 303)

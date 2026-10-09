@@ -112,12 +112,28 @@ class DataManager:
             err_msg = "Failed to save database object."
             raise RuntimeError(err_msg) from error
 
-    def add_favorite(self, user_id: int, movie_id: int) -> None:
-        """Add a movie to a user's favorites."""
+    def add_movie_to_favorites(self, user_id: int, data: dict) -> None:
+        """Add a movie and its favorite relationship atomically."""
         try:
             with self.db.session_factory.begin() as session:
-                favorite = UsersFavorite(user_id=user_id, movie_id=movie_id)
-                session.add(favorite)
+                movie = session.scalars(
+                    select(Movie).where(Movie.imdb_id == data["imdb_id"]),
+                ).one_or_none()
+                if movie is None:
+                    movie = Movie(
+                        name=data["title"],
+                        year=data["year"],
+                        director=data.get("director"),
+                        poster_url=data.get("poster_url"),
+                        imdb_id=data["imdb_id"],
+                    )
+                    session.add(movie)
+                    session.flush()
+
+                if session.get(UsersFavorite, (user_id, movie.id)) is None:
+                    session.add(
+                        UsersFavorite(user_id=user_id, movie_id=movie.id),
+                    )
         except SQLAlchemyError as error:
             err_msg = "Failed to save favorite movie."
             raise RuntimeError(err_msg) from error
