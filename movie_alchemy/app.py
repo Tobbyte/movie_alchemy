@@ -463,8 +463,7 @@ def populate_sample_data(data_manager: DataManager) -> None:
 
 
 if __name__ == "__main__":
-    db = DB()
-    db.reset_db()
-    db.create_tables()
-    populate_sample_data(DataManager())
+    # db = DB()
+    # db.reset_db()
+    # populate_sample_data(DataManager())
     MovieAlchemyApp().run(debug=True, port=5000)

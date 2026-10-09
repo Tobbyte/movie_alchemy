@@ -12,6 +12,7 @@ class DataManager:
     def __init__(self) -> None:
         """Initialize the DataManager with a database instance."""
         self.db = DB()
+        self.db.create_tables()
 
     def create_user(self, name: str) -> User:
         """Create a new user and add it to the database."""
