@@ -436,43 +436,7 @@ class MovieAlchemyApp:
         self.app.run(**kwargs)
 
 
-def populate_sample_data(data_manager: DataManager) -> None:
-    """Populate the database with sample data."""
-    # Create sample users
-    user1 = data_manager.create_user("Alice")
-    user2 = data_manager.create_user("Bob")
-
-    # Create sample movies
-    movie1 = Movie(
-        name="Inception",
-        director="Christopher Nolan",
-        year="2010",
-        poster_url="https://example.com/inception.jpg",
-        imdb_id="tt1375666",
-    )
-    movie2 = Movie(
-        name="The Matrix",
-        director="The Wachowskis",
-        year="1999",
-        poster_url="https://example.com/matrix.jpg",
-        imdb_id="tt0133093",
-    )
-
-    # Save movies to the database
-    data_manager.save_object(movie1)
-    data_manager.save_object(movie2)
-
-    # Create sample favorites
-    favorite1 = UsersFavorite(user_id=user1.id, movie_id=movie1.id)
-    favorite2 = UsersFavorite(user_id=user2.id, movie_id=movie2.id)
-
-    # Save favorites to the database
-    data_manager.save_object(favorite1)
-    data_manager.save_object(favorite2)
-
-
 if __name__ == "__main__":
     # db = DB()
     # db.reset_db()
-    # populate_sample_data(DataManager())
     MovieAlchemyApp().run(debug=True, port=5000)
