@@ -9,6 +9,11 @@ from config import (
     API_ERR_INVALID_REQUEST_DATA,
     API_ERR_METHOD_NOT_ALLOWED,
     API_ERR_TOO_MANY_REQUESTS,
+    LIMITER_DEFAULT_LIMIT,
+    OMBD_GET_TITLE_URL,
+    OMBD_KEY_NOT_SET_ERROR,
+    OMBD_SEARCH_URL,
+    STATUS_200_OK,
 )
 from datamanager import DataManager
 from dotenv import load_dotenv
@@ -21,13 +26,12 @@ from werkzeug.exceptions import HTTPException
 
 from movie_alchemy.models import Movie, UsersFavorite
 
-DB_USER_NAME = "name"
-STATUS_200_OK = 200
-load_dotenv()
-
 
 class InvalidParamError(Exception):
     """A query parameter is unknown or has an invalid value."""
+
+
+load_dotenv()
 
 
 class MovieAlchemyApp:
@@ -43,13 +47,18 @@ class MovieAlchemyApp:
         Limiter(
             key_func=get_remote_address,
             app=self.app,
-            default_limits=["100 per minute"],
+            default_limits=[LIMITER_DEFAULT_LIMIT],
         )
 
         # init_swagger_ui(self.app)  # noqa: ERA001
 
         self.setup_routes()
         self.setup_error_handlers()
+
+        self.api_key = os.getenv("OMDB_API_KEY")
+        if not self.api_key:
+            err_msg = OMBD_KEY_NOT_SET_ERROR
+            raise ValueError(err_msg)
 
     def setup_error_handlers(self) -> None:
         """Register JSON error handlers for the API application."""
@@ -63,9 +72,9 @@ class MovieAlchemyApp:
         )
 
     @staticmethod
-    def api_page_not_found(_: HTTPException) -> tuple[Response, int]:
+    def api_page_not_found(_: HTTPException) -> str:
         """Return a JSON response for 404."""
-        return jsonify({"error": API_ERR_404_NOT_FOUND}), 404
+        return render_template("404.html")
 
     @staticmethod
     def api_method_not_allowed(_: HTTPException) -> tuple[Response, int]:
@@ -78,9 +87,9 @@ class MovieAlchemyApp:
         return jsonify({"error": API_ERR_TOO_MANY_REQUESTS}), 429
 
     @staticmethod
-    def api_internal_server_error(_: Exception) -> tuple[Response, int]:
+    def api_internal_server_error(_: Exception) -> str:
         """Return a JSON response for internal API errors."""
-        return jsonify({"error": API_ERR_INTERNAL_SERVER_ERROR}), 500
+        return render_template("500.html")
 
     @staticmethod
     def api_invalid_params(error: InvalidParamError) -> tuple[Response, int]:
@@ -88,9 +97,9 @@ class MovieAlchemyApp:
         return jsonify({"error": str(error)}), 400
 
     @staticmethod
-    def api_db_error(error: Exception) -> tuple[Response, int]:
+    def api_db_error(_: Exception) -> str:
         """Return a JSON 500 for database errors."""
-        return jsonify({"error": "Database error", "details": str(error)}), 500
+        return render_template("500.html")
 
     def setup_routes(self) -> None:
         """Set up the API routes for the Flask app."""
@@ -129,20 +138,22 @@ class MovieAlchemyApp:
 
     ### route handlers ###
 
-    def index(self) -> str:
+    def index(self, error: dict | None = None) -> str:
         """Render the index page with a list of users.
 
         for /
         """
-        users = self.data_manager.get_users()
-        return render_template("index.html", users=users)
+        try:
+            users = self.data_manager.get_users()
+        except RuntimeError:
+            return render_template("500.html")
+        return render_template("index.html", users=users, error=error)
 
     def users(self) -> Response | tuple[Response, int]:
         """List all users or create a new user.
 
         for /users
         """
-        print("users called", request.method)
         if request.method == "POST":
             return self.create_user()
 
@@ -154,17 +165,20 @@ class MovieAlchemyApp:
 
         for /users/<user_id>/movies
         """
-        print("users_movies called", request.method)
         if request.method == "POST":
             return self.users_movies_add(user_id)
 
-        return self.render_movies_page(user_id)
+        return self.render_movies_page(
+            user_id,
+            error=request.args.get("error"),
+        )
 
     def render_movies_page(
         self,
         user_id: int,
         movie_suggestions: dict | None = None,
         search_query: str | None = None,
+        error: str | None = None,
     ) -> str | tuple[Response, int]:
         """Render a user's movies and optional OMDb suggestions."""
         user = self.data_manager.get_user_by_id(user_id)
@@ -180,8 +194,6 @@ class MovieAlchemyApp:
             )
             .filter_by(user_id=user_id)
         ]
-        print(f"User {user_id} favorites: {favorites}")
-        print(f"Movies suggestions: {movie_suggestions}")
         return render_template(
             "movies.html",
             user_name=user.name,
@@ -189,6 +201,7 @@ class MovieAlchemyApp:
             movies=favorites,
             movie_suggestions=movie_suggestions,
             search_query=search_query,
+            error=error,
         )
 
     def create_user(self) -> Response:
@@ -198,8 +211,7 @@ class MovieAlchemyApp:
         if not name:
             return redirect(url_for("index"), 404)
 
-        new_user = self.data_manager.create_user(name)
-        print(new_user)
+        self.data_manager.create_user(name)
         return redirect(url_for("index"), 303)
 
     def users_movies_add(
@@ -208,13 +220,18 @@ class MovieAlchemyApp:
     ) -> tuple[Response, int] | str:
         """Add a new movie."""
         movie_name = request.form.get("movie_name", "").strip()
-        print(f"Adding movie: {movie_name}")
 
         if not movie_name:
             return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
 
         results = self.search_ombd_by_title(movie_name)
-        print(f"OMDb API search results: {results}")
+
+        if isinstance(results, dict) and results.get("error"):
+            return self.render_movies_page(
+                user_id,
+                search_query=movie_name,
+                error=results["error"],
+            )
 
         return self.render_movies_page(
             user_id,
@@ -225,21 +242,30 @@ class MovieAlchemyApp:
     def users_movies_save(
         self,
         user_id: int,
-    ) -> tuple[Response, int] | Response:
+    ) -> tuple[Response, int] | Response | str:
         """Save a movie to a user's favorites."""
         movie_name = request.form.get("movie_name", "").strip()
-        print(f"Saving movie ID: {movie_name} for user ID: {user_id}")
 
         if not movie_name:
-            return jsonify({"error": API_ERR_INVALID_REQUEST_DATA}), 400
+            return redirect(
+                url_for(
+                    "users_movies",
+                    user_id=user_id,
+                    error=API_ERR_INVALID_REQUEST_DATA,
+                ),
+            )
 
         omdb_movie = self.fetch_omdb_data(movie_name)
-        print(f"OMDb API response: {omdb_movie}")
+
         if omdb_movie:
-            if not omdb_movie.get("title"):
-                return jsonify({
-                    "error": "Movie title not found in OMDb response",
-                }), 400
+            if omdb_movie.get("error"):
+                return redirect(
+                    url_for(
+                        "users_movies",
+                        user_id=user_id,
+                        error=omdb_movie.get("error"),
+                    ),
+                )
             new_movie = self.data_manager.add_movie(
                 name=omdb_movie.get("title"),  # pyright: ignore[reportArgumentType]
                 year=omdb_movie.get("year"),
@@ -287,13 +313,11 @@ class MovieAlchemyApp:
 
     def fetch_omdb_data(self, movie_name: str) -> dict | None:
         """Fetch movie data from the OMDb API by title."""
-        api_key = os.getenv("OMDB_API_KEY")
-        if not api_key:
-            err_msg = "OMDB_API_KEY environment variable is not set."
-            raise ValueError(err_msg)
-
-        url = f"http://www.omdbapi.com/?t={movie_name}&apikey={api_key}"
-        response = requests.get(url, timeout=15)
+        url = OMBD_GET_TITLE_URL.format(title=movie_name, api_key=self.api_key)
+        try:
+            response = requests.get(url, timeout=15)
+        except requests.RequestException:
+            return {"error": "There was an error at OMDb, try again later."}
 
         if response.status_code == STATUS_200_OK:
             data = response.json()
@@ -309,13 +333,11 @@ class MovieAlchemyApp:
 
     def search_ombd_by_title(self, title: str) -> dict | None:
         """Search for a movie by title using the OMDb API."""
-        api_key = os.getenv("OMDB_API_KEY")
-        if not api_key:
-            err_msg = "OMDB_API_KEY environment variable is not set."
-            raise ValueError(err_msg)
-
-        url = f"http://www.omdbapi.com/?s={title}&apikey={api_key}"
-        response = requests.get(url, timeout=15)
+        url = OMBD_SEARCH_URL.format(title=title, api_key=self.api_key)
+        try:
+            response = requests.get(url, timeout=15)
+        except requests.RequestException:
+            return {"error": "There was an error at OMDb, try again later."}
 
         if response.status_code == STATUS_200_OK:
             data = response.json()

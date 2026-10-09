@@ -1,3 +1,4 @@
+"""Movie Alchemy Models."""
 from datetime import datetime
 
 from sqlalchemy import (

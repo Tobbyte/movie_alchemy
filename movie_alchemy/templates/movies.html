@@ -8,6 +8,9 @@
         <button type="submit">Search Movie</button>
         </form>
 </div>
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
 {% if movie_suggestions %}
 <h2>Movie Suggestions</h2>
     <div class="suggestions-container">

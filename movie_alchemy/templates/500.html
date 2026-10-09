@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal Server Error</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style_ssr.css') }}">
+</head>
+
+<body>
+    <div class="status-page">
+        <h1>😞</h1>
+        <p>{{ error }}</p>
+        <p>Nothing you can do. Try again later.</p>
+    </div>
+</body>
+
+</html>

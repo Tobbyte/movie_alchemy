@@ -1,5 +1,17 @@
 """Configuration file for the Masterblog_api app."""
 
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parent  # project root
+DB_PATH = PROJECT_ROOT / "data" / "movie_alchemy.sqlite"
+
+DB_USER_NAME = "name"
+STATUS_200_OK = 200
+OMBD_SEARCH_URL = "http://www.omdbapi.com/?s={title}&apikey={api_key}"
+OMBD_GET_TITLE_URL = "http://www.omdbapi.com/?t={title}&apikey={api_key}"
+OMBD_KEY_NOT_SET_ERROR = "OMDB_API_KEY environment variable is not set."
+LIMITER_DEFAULT_LIMIT = "100 per minute"
+
 API_ERR_INVALID_POST_ID = "Invalid post ID"
 API_ERR_INVALID_REQUEST_DATA = "Invalid request data"
 API_ERR_TOO_MANY_REQUESTS = "Too many requests"

@@ -1,10 +1,9 @@
 """Module to set up the database for the movie_alchemy project."""
 
 import sqlite3
-import sys
-from pathlib import Path
 from typing import Any
 
+from config import DB_PATH
 from sqlalchemy import (
     create_engine,
     event,
@@ -14,12 +13,6 @@ from sqlalchemy.orm import (
 )
 
 from movie_alchemy.models import Base
-
-# make runnable from wherever.
-PROJECT_ROOT = Path(__file__).resolve().parent  # project root
-DB_PATH = PROJECT_ROOT / "data" / "movie_alchemy.sqlite"
-# sys.path.insert(0, str(PROJECT_ROOT.parent))
-
 
 
 class DB:

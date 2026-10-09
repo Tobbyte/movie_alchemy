@@ -21,8 +21,12 @@ class DataManager:
 
     def get_users(self) -> list[User]:
         """Retrieve all users from the database."""
-        with self.db.session_factory.begin() as session:
-            return list(session.scalars(select(User)).all())
+        try:
+            with self.db.session_factory.begin() as session:
+                return list(session.scalars(select(User)).all())
+        except Exception as e:
+            err_msg = "Failed to retrieve users from the database."
+            raise RuntimeError(err_msg) from e
 
     def get_user_by_id(self, user_id: int) -> User | None:
         """Retrieve a user by their ID."""
