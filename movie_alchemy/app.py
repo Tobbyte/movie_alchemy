@@ -6,6 +6,7 @@ from typing import Any
 import requests
 from config import (
     API_ERR_404_NOT_FOUND,
+    API_ERR_DUPLICATE_USER,
     API_ERR_INTERNAL_SERVER_ERROR,
     API_ERR_INVALID_REQUEST_DATA,
     API_ERR_METHOD_NOT_ALLOWED,
@@ -16,7 +17,7 @@ from config import (
     OMBD_URL,
     STATUS_200_OK,
 )
-from datamanager import DataManager
+from datamanager import DataManager, DuplicateUserError
 from dotenv import load_dotenv
 from flask import Flask, redirect, render_template, request, url_for
 from flask_limiter import Limiter
@@ -237,7 +238,13 @@ class MovieAlchemyApp:
                 303,
             )
 
-        self.data_manager.create_user(name)
+        try:
+            self.data_manager.create_user(name)
+        except DuplicateUserError:
+            return redirect(
+                url_for("index", error=API_ERR_DUPLICATE_USER),
+                303,
+            )
         return redirect(url_for("index"), 303)
 
     def users_movies_add(

@@ -3,7 +3,11 @@
 from models import Movie, User, UsersFavorite
 from setup_db import DB
 from sqlalchemy import select
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+
+class DuplicateUserError(RuntimeError):
+    """Raised when a user name already exists."""
 
 
 class DataManager:
@@ -20,6 +24,9 @@ class DataManager:
             with self.db.session_factory.begin() as session:
                 new_user = User(name=name)
                 session.add(new_user)
+        except IntegrityError as error:
+            err_msg = "User name already exists."
+            raise DuplicateUserError(err_msg) from error
         except SQLAlchemyError as error:
             err_msg = "Failed to create user."
             raise RuntimeError(err_msg) from error

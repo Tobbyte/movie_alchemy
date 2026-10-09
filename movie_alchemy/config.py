@@ -14,6 +14,9 @@ LIMITER_DEFAULT_LIMIT = "100 per minute"
 
 API_ERR_INVALID_POST_ID = "Invalid post ID"
 API_ERR_INVALID_REQUEST_DATA = "Invalid request data"
+API_ERR_DUPLICATE_USER = (
+    "That user name is already taken. Try again with another name."
+)
 API_ERR_TOO_MANY_REQUESTS = "Too many requests"
 API_ERR_INTERNAL_SERVER_ERROR = "Internal server error"
 API_ERR_404_NOT_FOUND = "404 Not found"
