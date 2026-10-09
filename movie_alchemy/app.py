@@ -458,8 +458,6 @@ def populate_sample_data(data_manager: DataManager) -> None:
     data_manager.save_object(movie1)
     data_manager.save_object(movie2)
 
-    print(movie2)
-
     # Create sample favorites
     favorite1 = UsersFavorite(user_id=user1.id, movie_id=movie1.id)
     favorite2 = UsersFavorite(user_id=user2.id, movie_id=movie2.id)
