@@ -7,7 +7,7 @@ DB_PATH = PROJECT_ROOT / "data" / "movie_alchemy.sqlite"
 
 DB_USER_NAME = "name"
 STATUS_200_OK = 200
-OMBD_URL = "http://www.omdbapi.com/"
+OMBD_URL = "https://www.omdbapi.com/"
 OMBD_KEY_NOT_SET_ERROR = "OMDB_API_KEY environment variable is not set."
 OMBD_ERR_MSG = "There was an error at OMDb, try again later."
 LIMITER_DEFAULT_LIMIT = "100 per minute"
