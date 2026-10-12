@@ -101,7 +101,18 @@ h1 {
     letter-spacing: -0.025em;
     line-height: 1;
 }
+.back-link {
+    display: inline-block;
+    margin: 0.25rem 0 0.75rem;
+    font-size: 0.85rem;
+    text-decoration: none;
+    opacity: 0.75;
+}
 
+.back-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
 .page-header {
     margin-bottom: 3rem;
 }
@@ -110,6 +121,10 @@ h1 {
     margin-bottom: 2rem;
 }
 
+.header-actions {
+    justify-content: flex-end;
+    display: flex;
+}
 .eyebrow {
     margin-bottom: 0.8rem;
     color: var(--accent-dark);
