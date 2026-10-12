@@ -165,7 +165,13 @@ class MovieAlchemyApp:
         self.app.add_url_rule(
             "/users/<int:user_id>/movies/<int:movie_id>/delete",
             view_func=self.delete_favorite_movie,
-            methods=["POST"],
+            methods=["POST"],  # post bc. form has no delete method.
+        )
+
+        self.app.add_url_rule(
+            "/users/<int:user_id>/delete",
+            view_func=self.delete_user,
+            methods=["POST"],  # post bc. form has no delete method.
         )
 
     ### route handlers ###
@@ -406,6 +412,26 @@ class MovieAlchemyApp:
                 404,
             )
         return redirect(url_for("users_movies", user_id=user_id), 303)
+
+    def delete_user(
+        self,
+        user_id: int,
+    ) -> Response | tuple[str, int]:
+        """Delete a user and all their favorite movies."""
+        user = self.data_manager.get_user_by_id(user_id)
+
+        if not user:
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
+
+        if not self.data_manager.delete_user(user_id=user_id):
+            return (
+                render_template("404.html", error=API_ERR_404_NOT_FOUND),
+                404,
+            )
+        return redirect(url_for("index"), 303)
 
     def fetch_omdb_data(
         self,

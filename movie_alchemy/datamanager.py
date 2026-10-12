@@ -161,6 +161,21 @@ class DataManager:
             err_msg = "Failed to delete favorite movie."
             raise RuntimeError(err_msg) from error
 
+    def delete_user(self, user_id: int) -> bool:
+        """Delete a user and their associated favorites."""
+        try:
+            with self.db.session_factory.begin() as session:
+                user = session.scalars(
+                    select(User).where(User.id == user_id),
+                ).one_or_none()
+                if user:
+                    session.delete(user)
+                    return True
+                return False
+        except SQLAlchemyError as error:
+            err_msg = "Failed to delete user."
+            raise RuntimeError(err_msg) from error
+
     def add_movie(
         self,
         name: str,
