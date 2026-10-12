@@ -2,10 +2,11 @@
 
 from copy import copy
 
-from models import Movie, User, UsersFavorite
-from setup_db import DB
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, SQLAlchemyError
+
+from models import Movie, User, UsersFavorite
+from setup_db import DB
 
 
 class DuplicateUserError(RuntimeError):

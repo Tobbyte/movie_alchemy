@@ -1,6 +1,0 @@
-flask
-flask-limiter
-sqlalchemy
-requests
-python-dotenv
-pytest

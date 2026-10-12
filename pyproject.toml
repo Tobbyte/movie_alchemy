@@ -13,6 +13,3 @@ include = ["movie_alchemy*"]
 
 [tool.pytest.ini_options]
 addopts = "-v"
-
-[tool.vercel]
-entrypoint = "movie_alchemy.app:app"
