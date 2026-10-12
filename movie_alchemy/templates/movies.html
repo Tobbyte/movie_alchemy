@@ -1,24 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
 <header class="page-header compact-header">
-    <p class="eyebrow">Personal collection</p>
-    <a href="{{ url_for('index') }}" class="back-link">&larr; Back to collections</a>
-    <h1>{{ user_name }}'s Movies</h1>
+    <div class="header-text">
+        <a href="{{ url_for('index') }}" class="back-link">&larr; Back to collections</a>
+        <h1>{{ user_name }}'s Movies</h1>
+    </div>
     <div class="header-actions">
         <form action="{{ url_for('delete_user', user_id=user_id) }}" method="post"
             onsubmit="return confirm('Are you sure you want to delete your account? This action cannot be undone.');">
-            <button type="submit" class="delete-user-button">
-                <span aria-hidden="true">&times;</span> Delete account
-            </button>
+            <button type="submit" class="delete-user-button">Delete account</button>
         </form>
     </div>
 </header>
 
 <div class="search_container">
-    <form action="{{ url_for('users_movies', user_id=user_id) }}" method="post">
-        <label for="movie_name">Movie name:</label>
-        <input type="text" id="movie_name" name="movie_name" required>
-        <button type="submit"><span aria-hidden="true">+</span> Find a movie</button>
+    <form class="search-form" action="{{ url_for('users_movies', user_id=user_id) }}" method="post">
+        <label class="visually-hidden" for="movie_name">Movie name</label>
+        <input type="text" id="movie_name" name="movie_name" placeholder="Search for a movie to add" required>
+        <button type="submit">Find a movie</button>
     </form>
 </div>
 
@@ -27,16 +26,15 @@
 {% endif %}
 
 {% if movie_suggestions %}
-<h2>Movie Suggestions</h2>
 <div class="suggestions-container">
-    <p>Suggestions for your search "{{ search_query }}". Please select:</p>
+    <h2>Results for "{{ search_query }}"</h2>
     <ul>
         {% for suggestion in movie_suggestions %}
         <li>
             <form action="{{ url_for('users_movies_save', user_id=user_id) }}" method="post">
                 <input type="hidden" name="imdb_id" value="{{ suggestion.imdbID }}">
-                {{ suggestion.Title }} ({{ suggestion.Year }})
-                <button type="submit"><span aria-hidden="true">+</span> Add to shelf</button>
+                <span class="suggestion-title">{{ suggestion.Title }} <span class="suggestion-year">({{ suggestion.Year }})</span></span>
+                <button type="submit">Add to shelf</button>
             </form>
         </li>
         {% endfor %}
@@ -46,26 +44,23 @@
 
 <div class="movies-container">
     {% for movie, note in movies %}
-    <div class="favorite-item">
+    <article class="favorite-item">
         <div class="movie-card">
-            <form class="delete-form"
-                action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
-                <button type="submit" aria-label="Remove {{ movie.name }} from favorites">&times;</button>
-            </form>
-            <h2>{{ movie.name }}</h2>
-            <p>Director: {{ movie.director }}</p>
-            <p>Year: {{ movie.year }}</p>
             <div class="poster-frame">
                 <img src="{{ movie.poster_url }}" alt="{{ movie.name }} poster" class="poster"
                     onerror="this.hidden = true; this.parentElement.classList.add('poster-missing');">
+                <form class="delete-form"
+                    action="{{ url_for('delete_favorite_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
+                    <button type="submit" aria-label="Remove {{ movie.name }} from favorites">&times;</button>
+                </form>
+            </div>
+            <div class="movie-info">
+                <h2>{{ movie.name }}</h2>
+                <p>{{ movie.director or 'Unknown director' }}{% if movie.year %}, {{ movie.year }}{% endif %}</p>
             </div>
         </div>
 
         <div class="movie-editor">
-            <div class="note-heading">
-                <span>Movie details</span>
-                <button type="button" class="edit-movie-button" aria-label="Edit {{ movie.name }}">Edit</button>
-            </div>
             <form class="movie-form"
                 action="{{ url_for('update_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
                 <div class="movie-details" hidden>
@@ -82,11 +77,17 @@
                     <input id="imdb_id_{{ movie.id }}" name="imdb_id" type="text" value="{{ movie.imdb_id or '' }}">
                 </div>
                 <label for="note_{{ movie.id }}">Note</label>
-                <textarea id="note_{{ movie.id }}" name="note" maxlength="500" rows="3">{{ note or '' }}</textarea>
-                <button type="submit">Save changes</button>
+                <textarea id="note_{{ movie.id }}" name="note" maxlength="500" rows="2"
+                    placeholder="Add a note">{{ note or '' }}</textarea>
+                <div class="form-actions">
+                    <button type="button" class="edit-movie-button" aria-expanded="false">Edit details</button>
+                    <button type="submit">Save</button>
+                </div>
             </form>
         </div>
-    </div>
+    </article>
+    {% else %}
+    <p class="empty-state">Nothing here yet. Search for a title above to add your first movie.</p>
     {% endfor %}
 </div>
 
@@ -97,7 +98,8 @@
 
         editButton.addEventListener('click', () => {
             details.hidden = !details.hidden;
-            editButton.textContent = details.hidden ? 'Edit' : 'Cancel';
+            editButton.textContent = details.hidden ? 'Edit details' : 'Hide details';
+            editButton.setAttribute('aria-expanded', String(!details.hidden));
         });
     });
 </script>
