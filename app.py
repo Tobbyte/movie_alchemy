@@ -519,6 +519,8 @@ class MovieAlchemyApp:
         """Start the Flask app."""
         self.app.run(**kwargs)
 
+movie_alchemy_project = MovieAlchemyApp()
+app = movie_alchemy_project.app
 
 if __name__ == "__main__":
     # db = DB()
