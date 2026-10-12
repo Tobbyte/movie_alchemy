@@ -12,6 +12,14 @@ import os
 from typing import Any
 
 import requests
+from dotenv import load_dotenv
+from flask import Flask, redirect, render_template, request, url_for
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from sqlalchemy.exc import SQLAlchemyError
+from werkzeug import Response
+from werkzeug.exceptions import BadRequest, HTTPException
+
 from config import (
     API_ERR_404_NOT_FOUND,
     API_ERR_DUPLICATE_USER,
@@ -27,13 +35,6 @@ from config import (
     STATUS_200_OK,
 )
 from datamanager import DataManager, DuplicateUserError
-from dotenv import load_dotenv
-from flask import Flask, redirect, render_template, request, url_for
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
-from sqlalchemy.exc import SQLAlchemyError
-from werkzeug import Response
-from werkzeug.exceptions import BadRequest, HTTPException
 
 load_dotenv()
 
