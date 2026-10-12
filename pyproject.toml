@@ -15,4 +15,4 @@ include = ["movie_alchemy*"]
 addopts = "-v"
 
 [tool.vercel]
-entrypoint = "movie_alchemy/app.py"
+entrypoint = "movie_alchemy.app:app"
