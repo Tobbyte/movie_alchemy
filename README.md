@@ -21,12 +21,14 @@ them again. Data is stored in SQLite via SQLAlchemy 2.0.
 ## Project structure
 
 ```text
-.d
+.
+├── __init__.py
 ├── app.py          # MovieAlchemyApp: routes, error handlers, OMDb requests
 ├── config.py       # Constants: DB path, OMDb URL, limits, user-facing messages
 ├── datamanager.py  # DataManager: all CRUD operations
 ├── models.py       # SQLAlchemy models: User, Movie, UsersFavorite
 ├── setup_db.py     # DB: engine, session factory, SQLite foreign key pragma
+├── requirements.txt # Python dependencies
 ├── templates/
 │   ├── base.html   # Layout
 │   ├── index.html  # User list + "create user" form
@@ -36,7 +38,7 @@ them again. Data is stored in SQLite via SQLAlchemy 2.0.
 ├── static/
 │   └── style.css
 ├── data/           # SQLite file is created here automatically
-└── .env            # Your OMDb API key
+└── .env            # Local configuration; create this file with your OMDb API key
 ```
 
 ## Getting started
