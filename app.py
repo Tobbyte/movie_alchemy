@@ -523,4 +523,4 @@ class MovieAlchemyApp:
 if __name__ == "__main__":
     # db = DB()
     # db.reset_db()
-    MovieAlchemyApp().run(debug=True)
+    MovieAlchemyApp().run(debug=True, port=5002)
