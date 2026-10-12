@@ -1,6 +1,6 @@
-flask
-flask-limiter
-sqlalchemy
+Flask
 requests
+flask-limiter
+Flask-SQLAlchemy
+werkzeug
 python-dotenv
-pytest
