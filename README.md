@@ -11,6 +11,9 @@ them again. Data is stored in SQLite via SQLAlchemy 2.0.
 - Movie search by title; pick the exact result from OMBd search and it is saved by its IMDb ID
 - Movie infos like poster, director, year from OMBd are saved.
 - Personal note (max. 500 characters) per favorite, editable inline
+- Movie details can be changed per user and are saved as overrides on that
+  user's favorite.
+- Users can delete their account and all associated favorites.
 - Server-side rendered pages
 - Rate limiting: 100 requests per minute per IP address (Flask-Limiter)
 
@@ -84,8 +87,9 @@ and all tables are created automatically on the first start.
 | GET / POST | `/users`                                   | List users / create a user               |
 | GET / POST | `/users/<user_id>/movies`                  | Show a shelf / search OMDb by title      |
 | POST       | `/users/<user_id>/movies_save`             | Save a selected search result (`imdb_id`) |
-| POST       | `/users/<user_id>/movies/<movie_id>/update` | Update the note of a favorite            |
+| POST       | `/users/<user_id>/movies/<movie_id>/update` | Update a favorite's details and note     |
 | POST       | `/users/<user_id>/movies/<movie_id>/delete` | Remove a movie from a user's favorites   |
+| POST       | `/users/<user_id>/delete`                   | Delete a user and their favorites        |
 
 Successful `POST` requests redirect with `303 See Other`
 (Post/Redirect/Get), so reloading a page never resubmits a form.
