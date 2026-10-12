@@ -66,18 +66,20 @@
                 <button type="button" class="edit-movie-button" aria-label="Edit {{ movie.name }}">Edit</button>
             </div>
             <form class="movie-form"
-                action="{{ url_for('update_movie', user_id=user_id, movie_id=movie.id) }}" method="post" hidden>
-                <label for="name_{{ movie.id }}">Title</label>
-                <input id="name_{{ movie.id }}" name="name" type="text" value="{{ movie.name }}" required>
-                <label for="director_{{ movie.id }}">Director</label>
-                <input id="director_{{ movie.id }}" name="director" type="text" value="{{ movie.director or '' }}">
-                <label for="year_{{ movie.id }}">Year</label>
-                <input id="year_{{ movie.id }}" name="year" type="text" value="{{ movie.year or '' }}">
-                <label for="poster_url_{{ movie.id }}">Poster URL</label>
-                <input id="poster_url_{{ movie.id }}" name="poster_url" type="url"
-                    value="{{ movie.poster_url or '' }}">
-                <label for="imdb_id_{{ movie.id }}">IMDb ID</label>
-                <input id="imdb_id_{{ movie.id }}" name="imdb_id" type="text" value="{{ movie.imdb_id or '' }}">
+                action="{{ url_for('update_movie', user_id=user_id, movie_id=movie.id) }}" method="post">
+                <div class="movie-details" hidden>
+                    <label for="name_{{ movie.id }}">Title</label>
+                    <input id="name_{{ movie.id }}" name="name" type="text" value="{{ movie.name }}" required>
+                    <label for="director_{{ movie.id }}">Director</label>
+                    <input id="director_{{ movie.id }}" name="director" type="text" value="{{ movie.director or '' }}">
+                    <label for="year_{{ movie.id }}">Year</label>
+                    <input id="year_{{ movie.id }}" name="year" type="text" value="{{ movie.year or '' }}">
+                    <label for="poster_url_{{ movie.id }}">Poster URL</label>
+                    <input id="poster_url_{{ movie.id }}" name="poster_url" type="url"
+                        value="{{ movie.poster_url or '' }}">
+                    <label for="imdb_id_{{ movie.id }}">IMDb ID</label>
+                    <input id="imdb_id_{{ movie.id }}" name="imdb_id" type="text" value="{{ movie.imdb_id or '' }}">
+                </div>
                 <label for="note_{{ movie.id }}">Note</label>
                 <textarea id="note_{{ movie.id }}" name="note" maxlength="500" rows="3">{{ note or '' }}</textarea>
                 <button type="submit">Save changes</button>
@@ -90,11 +92,11 @@
 <script>
     document.querySelectorAll('.movie-editor').forEach((editor) => {
         const editButton = editor.querySelector('.edit-movie-button');
-        const form = editor.querySelector('.movie-form');
+        const details = editor.querySelector('.movie-details');
 
         editButton.addEventListener('click', () => {
-            form.hidden = !form.hidden;
-            editButton.textContent = form.hidden ? 'Edit' : 'Cancel';
+            details.hidden = !details.hidden;
+            editButton.textContent = details.hidden ? 'Edit' : 'Cancel';
         });
     });
 </script>
