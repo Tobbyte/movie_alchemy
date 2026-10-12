@@ -1,4 +1,12 @@
-"""Movie Alchemy app."""
+"""Movie Alchemy app.
+
+Todo, but out of scope for now:
+- logging,
+- tests
+- api doc
+- auth
+
+"""
 
 import os
 from typing import Any
