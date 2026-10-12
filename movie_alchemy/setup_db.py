@@ -47,4 +47,5 @@ class DB:
 
 
 if __name__ == "__main__":
+    DB().reset_db()
     DB().create_tables()

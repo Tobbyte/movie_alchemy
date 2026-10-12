@@ -110,11 +110,21 @@ class UsersFavorite(Base):
         self,
         user_id: int,
         movie_id: int,
+        name: str | None = None,
+        director: str | None = None,
+        year: str | None = None,
+        poster_url: str | None = None,
+        imdb_id: str | None = None,
         note: str | None = None,
     ) -> None:
         """Initialize the UsersFavorites instance."""
         self.user_id = user_id
         self.movie_id = movie_id
+        self.name = name
+        self.director = director
+        self.year = year
+        self.poster_url = poster_url
+        self.imdb_id = imdb_id
         self.note = note
 
     user_id: Mapped[int] = mapped_column(
@@ -125,6 +135,11 @@ class UsersFavorite(Base):
         ForeignKey("movies.id", ondelete="CASCADE"),
         primary_key=True,
     )
+    name: Mapped[str | None] = mapped_column(String, default=None)
+    director: Mapped[str | None] = mapped_column(String, default=None)
+    year: Mapped[str | None] = mapped_column(String, default=None)
+    poster_url: Mapped[str | None] = mapped_column(String, default=None)
+    imdb_id: Mapped[str | None] = mapped_column(String, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         server_default=func.now(),
@@ -144,5 +159,10 @@ class UsersFavorite(Base):
         return {
             "user_id": self.user_id,
             "movie_id": self.movie_id,
+            "name": self.name,
+            "director": self.director,
+            "year": self.year,
+            "poster_url": self.poster_url,
+            "imdb_id": self.imdb_id,
             "note": self.note,
         }

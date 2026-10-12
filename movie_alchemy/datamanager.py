@@ -1,5 +1,7 @@
 """Module for managing database operations."""
 
+from copy import copy
+
 from models import Movie, User, UsersFavorite
 from setup_db import DB
 from sqlalchemy import select
@@ -71,12 +73,37 @@ class DataManager:
         try:
             with self.db.session_factory.begin() as session:
                 statement = (
-                    select(Movie, UsersFavorite.note)
+                    select(Movie, UsersFavorite)
                     .join(UsersFavorite, UsersFavorite.movie_id == Movie.id)
                     .where(UsersFavorite.user_id == user_id)
                     .order_by(UsersFavorite.created_at.desc())
                 )
-                return [tuple(row) for row in session.execute(statement).all()]
+                favorites = []
+                for movie, favorite in session.execute(statement).all():
+                    display_movie = copy(movie)
+                    display_movie.name = favorite.name or display_movie.name
+                    display_movie.director = (
+                        favorite.director
+                        if favorite.director is not None
+                        else display_movie.director
+                    )
+                    display_movie.year = (
+                        favorite.year
+                        if favorite.year is not None
+                        else display_movie.year
+                    )
+                    display_movie.poster_url = (
+                        favorite.poster_url
+                        if favorite.poster_url is not None
+                        else display_movie.poster_url
+                    )
+                    display_movie.imdb_id = (
+                        favorite.imdb_id
+                        if favorite.imdb_id is not None
+                        else display_movie.imdb_id
+                    )
+                    favorites.append((display_movie, favorite.note))
+                return favorites
         except SQLAlchemyError as error:
             err_msg = "Failed to retrieve favorite movies."
             raise RuntimeError(err_msg) from error
@@ -114,19 +141,23 @@ class DataManager:
 
                 if session.get(UsersFavorite, (user_id, movie.id)) is None:
                     session.add(
-                        UsersFavorite(user_id=user_id, movie_id=movie.id),
+                        UsersFavorite(
+                            user_id=user_id,
+                            movie_id=movie.id,
+                        ),
                     )
         except SQLAlchemyError as error:
             err_msg = "Failed to save favorite movie."
             raise RuntimeError(err_msg) from error
 
-    def update_favorite_note(
+    def update_movie(
         self,
         user_id: int,
         movie_id: int,
+        movie_data: dict[str, str | None],
         note: str | None,
     ) -> bool:
-        """Update the note attached to a user's favorite movie."""
+        """Update a movie and its details per user."""
         try:
             with self.db.session_factory.begin() as session:
                 favorite = session.scalars(
@@ -136,11 +167,29 @@ class DataManager:
                     ),
                 ).one_or_none()
                 if favorite:
+                    movie = session.get(Movie, movie_id)
+                    if movie is None:
+                        return False
+                    for field_name in (
+                        "name",
+                        "director",
+                        "year",
+                        "poster_url",
+                        "imdb_id",
+                    ):
+                        value = movie_data[field_name]
+                        setattr(
+                            favorite,
+                            field_name,
+                            None
+                            if value == getattr(movie, field_name)
+                            else value,
+                        )
                     favorite.note = note
                     return True
                 return False
         except SQLAlchemyError as error:
-            err_msg = "Failed to update favorite movie note."
+            err_msg = "Failed to update favorite movie."
             raise RuntimeError(err_msg) from error
 
     def delete_favorite(self, user_id: int, movie_id: int) -> bool:
