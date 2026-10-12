@@ -15,7 +15,7 @@ from sqlalchemy.orm import (
 )
 
 
-class Base(DeclarativeBase):
+class Base(DeclarativeBase):  # pylint: disable=too-few-public-methods
     """Base class for declarative models."""
 
 
@@ -101,12 +101,12 @@ class Movie(Base):
             "imdb_id": self.imdb_id,
         }
 
-class UsersFavorite(Base):
+class UsersFavorite(Base):  # pylint: disable=too-many-instance-attributes
     """Base class defining the users_favorites table."""
 
     __tablename__ = "user_favs"
 
-    def __init__(
+    def __init__(  # pylint: disable=too-many-arguments, too-many-positional-arguments  # noqa: PLR0913
         self,
         user_id: int,
         movie_id: int,

@@ -39,7 +39,7 @@ from datamanager import DataManager, DuplicateUserError
 load_dotenv()
 
 
-class MovieAlchemyApp:
+class MovieAlchemyApp:  # pylint: disable=too-many-public-methods
     """Main application class for Movie Alchemy."""
 
     def __init__(self) -> None:

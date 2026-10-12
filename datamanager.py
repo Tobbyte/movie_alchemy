@@ -1,3 +1,4 @@
+# pylint: disable=no-member
 """Module for managing database operations."""
 
 from copy import copy
